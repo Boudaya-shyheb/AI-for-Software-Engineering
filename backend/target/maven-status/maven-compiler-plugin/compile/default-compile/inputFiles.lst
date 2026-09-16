@@ -1,0 +1,5 @@
+/workspaces/AI-for-Software-Engineering/backend/src/main/java/com/aicareeragent/BackendApplication.java
+/workspaces/AI-for-Software-Engineering/backend/src/main/java/com/aicareeragent/controller/AnalysisController.java
+/workspaces/AI-for-Software-Engineering/backend/src/main/java/com/aicareeragent/controller/HealthController.java
+/workspaces/AI-for-Software-Engineering/backend/src/main/java/com/aicareeragent/dto/AnalysisRequest.java
+/workspaces/AI-for-Software-Engineering/backend/src/main/java/com/aicareeragent/service/AiServiceClient.java

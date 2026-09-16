@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ai_career_agent
+      POSTGRES_USER: career
+      POSTGRES_PASSWORD: career
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U career -d ai_career_agent"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ai-service:
+    build: ./ai-service
+    environment:
+      EMBEDDING_MODEL: sentence-transformers/all-MiniLM-L6-v2
+      LLM_ENABLED: "false"
+    ports:
+      - "8000:8000"
+
+  backend:
+    build: ./backend
+    environment:
+      AI_SERVICE_URL: http://ai-service:8000
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ai_career_agent
+      SPRING_DATASOURCE_USERNAME: career
+      SPRING_DATASOURCE_PASSWORD: career
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+
+  frontend:
+    build: ./frontend
+    environment:
+      VITE_API_URL: http://localhost:8080/api
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

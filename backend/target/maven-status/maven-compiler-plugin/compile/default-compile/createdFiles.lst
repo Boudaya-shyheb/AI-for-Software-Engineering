@@ -1,0 +1,5 @@
+com/aicareeragent/service/AiServiceClient.class
+com/aicareeragent/dto/AnalysisRequest.class
+com/aicareeragent/BackendApplication.class
+com/aicareeragent/controller/AnalysisController.class
+com/aicareeragent/controller/HealthController.class

@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: ai-career-agent-backend
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+server:
+  port: 8080
+ai:
+  service-url: ${AI_SERVICE_URL:http://localhost:8000}
