@@ -11,7 +11,7 @@ docker compose up --build
 
 Services :
 
-- Frontend React : http://localhost:5173
+- Frontend Angular : http://localhost:5173
 - API Spring Boot : http://localhost:8080/health
 - Service IA FastAPI : http://localhost:8000/docs
 - PostgreSQL : localhost:5432
