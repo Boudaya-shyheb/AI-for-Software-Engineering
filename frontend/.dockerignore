@@ -1,4 +1,11 @@
 node_modules
+<<<<<<< HEAD
 .angular
 dist
 npm-debug.log*
+=======
+dist
+.angular
+.git
+*.log
+>>>>>>> 30c105c9 (verification)
