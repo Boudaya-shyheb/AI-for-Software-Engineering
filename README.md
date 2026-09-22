@@ -1,61 +1,62 @@
 # AI Career Agent
 
-AI Career Agent is a full-stack application for comparing a candidate CV with a job description and generating a compatibility score, matched skills, and a simple explainable summary.
+AI Career Agent is a full-stack project that compares a candidate's CV text with a job description and produces a compatibility score, matching skills, and a plain-language summary. The solution is built as a three-part system:
 
-The project combines:
-- an Angular frontend for user interaction
-- a Spring Boot backend as the API layer
-- a FastAPI AI service for the analysis logic
-- PostgreSQL in Docker for local infrastructure
+- Frontend: Angular app for interaction and report display
+- Backend: Spring Boot API that exposes endpoints and forwards requests to the AI service
+- AI service: FastAPI app that performs text preprocessing, skill extraction, TF-IDF scoring, semantic similarity, and final compatibility scoring
 
-## What this project does
+This project is designed as a demonstration of an AI-powered recruitment matching workflow and a clean service-oriented architecture.
 
-The application lets a user paste:
-- CV text
-- a job description
+## Project Goals
 
-Then it calculates:
-- TF-IDF similarity
-- embedding-based semantic similarity
-- skill overlap and missing skills
-- a final compatibility score
-- a concise result summary for the user
+- Analyze a CV and a target job description
+- Detect overlapping skills and missing required skills
+- Compute a deterministic compatibility score using multiple signal types
+- Return a human-readable summary of alignment between candidate and role
+- Provide a simple UI for quick evaluation and experimentation
 
-This is a demonstration project for AI-powered recruitment matching, not a production hiring system.
+## High-Level Architecture
 
-## Architecture
+The communication flow is:
+
+1. The Angular frontend sends a CV and a job description to the backend.
+2. The backend receives the request and calls the AI service.
+3. The AI service preprocesses the text, extracts terms, compares skills, computes similarity scores, and builds the analysis response.
+4. The backend returns the result to the frontend for display.
+5. PostgreSQL is provisioned through Docker Compose, although the current implementation primarily uses the AI service for the analysis logic.
+
+Flow diagram:
 
 ```mermaid
 flowchart LR
     A[Angular Frontend] --> B[Spring Boot Backend]
     B --> C[FastAPI AI Service]
-    C --> D[Text preprocessing]
-    C --> E[Skill extraction]
-    C --> F[TF-IDF + embeddings]
-    F --> G[Compatibility scoring]
-    G --> C
+    C --> D[Text Processing + TF-IDF + Embeddings]
+    D --> E[Skill Matching + Scoring]
+    E --> C
     C --> B
     B --> A
-    H[PostgreSQL] --> B
+    F[PostgreSQL] --> B
 ```
 
-## Tech stack
+## Tech Stack
 
 ### Frontend
 - Angular
 - TypeScript
-- HTML/CSS
-- Fetch API for REST calls
+- Bootstrap-like custom styling in component templates
+- Fetch-based REST communication
 
 ### Backend
 - Java 21
 - Spring Boot 3.4.1
 - Spring Web
 - Spring Validation
-- Spring Actuator
+- Actuator
 
-### AI service
-- Python
+### AI Service
+- Python 3
 - FastAPI
 - Pydantic
 - scikit-learn
@@ -69,7 +70,7 @@ flowchart LR
 - Docker Compose
 - PostgreSQL 16
 
-## Repository structure
+## Repository Structure
 
 ```text
 AI-for-Software-Engineering/
@@ -85,16 +86,16 @@ AI-for-Software-Engineering/
 │   │   │   └── career_agent.py
 │   │   ├── api/
 │   │   │   └── routes_analysis.py
+│   │   ├── config/
 │   │   ├── schemas/
 │   │   │   └── analysis.py
-│   │   ├── tools/
-│   │   │   ├── embedding_tool.py
-│   │   │   ├── pdf_tool.py
-│   │   │   ├── preprocessing_tool.py
-│   │   │   ├── scoring_tool.py
-│   │   │   ├── skill_matching_tool.py
-│   │   │   └── tfidf_tool.py
-│   │   └── config/
+│   │   └── tools/
+│   │       ├── embedding_tool.py
+│   │       ├── pdf_tool.py
+│   │       ├── preprocessing_tool.py
+│   │       ├── scoring_tool.py
+│   │       ├── skill_matching_tool.py
+│   │       └── tfidf_tool.py
 │   └── tests/
 │       ├── test_health.py
 │       └── test_tools.py
@@ -119,98 +120,76 @@ AI-for-Software-Engineering/
 │   ├── Dockerfile
 │   ├── angular.json
 │   ├── package.json
+│   ├── src/
+│   │   ├── app.component.html
+│   │   ├── app.component.ts
+│   │   ├── main.ts
+│   │   └── styles.css
 │   ├── tsconfig.json
-│   ├── tsconfig.app.json
-│   └── src/
-│       ├── app.component.html
-│       ├── app.component.ts
-│       ├── main.ts
-│       └── styles.css
+│   └── tsconfig.app.json
 └── docker-compose.yml
 ```
 
-## Startup
+## How the AI Analysis Works
 
-From the project root, run:
-
-```bash
-docker compose up --build
-```
-
-### Access points
-
-- Frontend: http://localhost:5173
-- Backend health check: http://localhost:8081/health
-- AI service docs: http://localhost:8000/docs
-- PostgreSQL: localhost:5432
-
-> Note: the Spring Boot app listens internally on port 8080, and Docker maps it to 8081 on the host machine.
-
-## Service behavior
-
-### Frontend
-The Angular app provides a form where the user enters:
-- CV text
-- job description
-
-After submission, it calls the backend and renders the result panel.
-
-### Backend
-The backend exposes the API and proxies the request to the AI service.
-
-Relevant route:
-- POST /api/analyses
-- GET /health
-
-### AI service
-The AI service is the analysis engine.
-
-Relevant route:
-- POST /api/analyses
-- GET /health
-
-The main logic is implemented in the agent and tools layer.
-
-## AI analysis flow
-
-The analysis pipeline is deterministic and uses several signals:
+The AI service is the core of the system. It follows a deterministic pipeline:
 
 1. Input validation
-   - both CV text and job description must be non-empty
+   - Ensures CV text and job description are provided
+   - Rejects empty values with HTTP 422 validation errors
+
 2. Text preprocessing
-   - normalize and clean the candidate text
-3. Keyword extraction
-   - gather relevant terms from both texts
+   - Normalizes text and prepares it for token-based matching
+   - Uses helper modules for text cleaning and preparation
+
+3. Term extraction
+   - Splits CV and job description into keywords
+   - Removes common stopwords and duplicates
+   - Captures relevant skill-like terms
+
 4. Similarity scoring
-   - TF-IDF lexical comparison
-   - embedding-based semantic comparison
+   - TF-IDF similarity compares lexical overlap between text sets
+   - Embedding similarity estimates semantic closeness using sentence-transformer-style comparisons
+
 5. Skill matching
-   - match job skills against candidate skills
-   - identify missing required skills
-6. Final score
-   - compute the compatibility score and package the response
+   - Compares extracted skills from the CV and the role
+   - Identifies matching skills and missing required skills
 
-## API contract
+6. Compatibility score
+   - Integrates skill overlap and semantic similarity into a final score
+   - Returns a value between 0 and 1, which the frontend converts into a displayed percentage
 
-### AI service request
+7. Explanation payload
+   - The response includes a summary and structured skill information, making the result easier to understand
+
+## API Contracts
+
+### 1) AI Service
+
+Base URL: http://localhost:8000
+
+Endpoint:
+- POST /api/analyses
+
+Request body:
 
 ```json
 {
-  "cv_text": "Java developer with Spring Boot, REST APIs, SQL and cloud deployment experience.",
-  "job_description": "We need a Java engineer with Spring Boot, REST APIs, backend services and SQL experience."
+  "cv_text": "Java Spring Boot developer with experience in REST APIs, SQL, and cloud deployment.",
+  "job_description": "We are looking for a Java developer with Spring Boot, REST APIs, and backend microservices experience."
 }
 ```
 
-### AI service response
+Response shape:
 
 ```json
 {
-  "analysis_id": "a1b2c3d4-...",
+  "analysis_id": "uuid",
   "status": "COMPLETED",
   "result": {
     "compatibility_score": 0.85,
     "models": {
-      "tfidf": { "similarity": 0.72 },
+      "tfidf": { "similarity": 0.7 },
       "embeddings": { "similarity": 0.9 }
     },
     "skills": {
@@ -222,16 +201,87 @@ The analysis pipeline is deterministic and uses several signals:
     },
     "ai_explanation": {
       "summary": "Analysis computed from the provided items.",
-      "strengths": [],
-      "skill_gaps": []
+      "strengths": [...],
+      "skill_gaps": [...]
     }
   }
 }
 ```
 
-## Running locally without Docker
+Important note:
+- This score is a compatibility indicator, not a hiring probability.
+- It is intended to be explainable and deterministic rather than a complex production-grade recruitment model.
 
-### AI service
+### 2) Backend
+
+Base URL: http://localhost:8080
+
+Endpoint:
+- POST /api/analyses
+- GET /health
+
+The backend acts as a gateway. It accepts the same payload schema and forwards the request to the AI service.
+
+### 3) Frontend
+
+The frontend exposes a browser form where the user can paste:
+- a CV text
+- a job description
+
+Then it calls the backend and renders the score, matching skills, and missing skills.
+
+## Services and Ports
+
+When using Docker Compose, the project runs these containers:
+
+| Service | URL | Purpose |
+| --- | --- | --- |
+| Frontend | http://localhost:5173 | User interface |
+| Backend | http://localhost:8080 | Spring API gateway |
+| AI service | http://localhost:8000/docs | FastAPI app and Swagger UI |
+| PostgreSQL | localhost:5432 | Data store for future persistence and integration |
+
+## Environment Variables
+
+The Docker Compose setup defines these core environment settings:
+
+### AI Service
+- EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+- LLM_ENABLED=false
+
+### Backend
+- AI_SERVICE_URL=http://ai-service:8000
+- SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ai_career_agent
+- SPRING_DATASOURCE_USERNAME=career
+- SPRING_DATASOURCE_PASSWORD=career
+
+### Frontend
+- VITE_API_URL=http://localhost:8080/api
+
+## Running the Project
+
+### Option 1: Full stack with Docker Compose
+
+From the project root:
+
+```bash
+docker compose up --build
+```
+
+This starts all services together:
+- PostgreSQL
+- AI service
+- Backend
+- Frontend
+
+Then open:
+- Frontend: http://localhost:5173
+- Backend health: http://localhost:8080/health
+- AI service docs: http://localhost:8000/docs
+
+### Option 2: Run services individually
+
+#### 1. AI service
 
 ```bash
 cd ai-service
@@ -241,14 +291,20 @@ pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### Backend
+#### 2. Backend
 
 ```bash
 cd backend
+./mvnw spring-boot:run
+```
+
+If Maven wrapper is not available, use:
+
+```bash
 mvn spring-boot:run
 ```
 
-### Frontend
+#### 3. Frontend
 
 ```bash
 cd frontend
@@ -258,31 +314,45 @@ npm run start
 
 ## Testing
 
-### AI service
+### AI service tests
 
 ```bash
 cd ai-service
 pytest
 ```
 
-The tests currently cover:
-- health endpoint
-- validation for empty input
-- deterministic score behavior
+The tests cover:
+- health endpoint behavior
+- validation of empty CV values
+- deterministic scoring
 - skill matching logic
-- complete agent report generation
+- completion of a full agent analysis response
 
-## Important notes
+## Notes on Current Implementation
 
-- The score is intended as an explainable compatibility indicator, not a hiring probability.
-- The system is a reusable prototype for matching CVs to job openings.
-- PostgreSQL is included in Docker Compose but is not yet the primary execution layer for the analysis logic.
-- The current implementation focuses on a simple, transparent evaluation pipeline rather than full production recruitment features.
+This project is a working demonstration rather than a full production-grade recruiter system. Some important practical notes:
 
-## Example cURL request
+- The AI service computes a deterministic score using a combination of lexical and semantic features.
+- It extracts keyword-style terms rather than deeply parsing full CV semantics.
+- The PostgreSQL database is prepared in Docker Compose but is not yet central to the current request flow.
+- The frontend is intentionally simple and focused on demonstrating the analysis pipeline.
+- The system is designed to be extendable with richer parsing, resume extraction, LLM explanations, and database-backed results.
+
+## Potential Future Improvements
+
+- CV parsing from PDF/DOCX files with real document ingestion
+- More advanced skill extraction using NLP pipelines or LLMs
+- Persistent analysis storage in PostgreSQL
+- Job recommendation and candidate ranking histories
+- User authentication and saved profiles
+- Better explanation generation and richer analytics dashboards
+
+## Example Request
+
+You can test the backend from the command line using curl:
 
 ```bash
-curl -X POST http://localhost:8081/api/analyses \
+curl -X POST http://localhost:8080/api/analyses \
   -H "Content-Type: application/json" \
   -d '{
     "cv_text": "Software engineer with Java, Spring Boot, REST APIs, and PostgreSQL experience.",
@@ -292,9 +362,11 @@ curl -X POST http://localhost:8081/api/analyses \
 
 ## Summary
 
-This project is a practical example of an AI-assisted recruitment matching workflow built across three layers:
-- frontend for user interaction
-- backend for API orchestration
-- AI service for matching and scoring
+AI Career Agent demonstrates how a modern AI-enabled recruitment workflow can be structured in a modular system:
 
-It is a good starting point for extending the solution with richer candidate parsing, database persistence, deeper NLP techniques, and production-ready hiring analytics.
+- frontend for user experience
+- backend for API orchestration
+- AI service for scoring and explainability
+- containerized deployment for easy local setup
+
+It is a practical starting point for building a smarter candidate-to-role matching solution.
