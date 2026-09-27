@@ -31,6 +31,9 @@ public class JobOffer {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
 
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private boolean active = true;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -63,4 +66,6 @@ public class JobOffer {
     public String getDescription() { return description; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; this.updatedAt = Instant.now(); }
 }

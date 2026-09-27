@@ -5,6 +5,7 @@ import com.aicareeragent.service.AiServiceClient;
 import com.aicareeragent.model.AnalysisRecord;
 import com.aicareeragent.repository.AnalysisRecordRepository;
 import com.aicareeragent.repository.UserRepository;
+import com.aicareeragent.repository.JobOfferRepository;
 import jakarta.validation.Valid;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
@@ -22,11 +23,13 @@ public class AnalysisController {
     private final AiServiceClient aiServiceClient;
     private final UserRepository users;
     private final AnalysisRecordRepository analyses;
+    private final JobOfferRepository offers;
 
-    public AnalysisController(AiServiceClient aiServiceClient, UserRepository users, AnalysisRecordRepository analyses) {
+    public AnalysisController(AiServiceClient aiServiceClient, UserRepository users, AnalysisRecordRepository analyses, JobOfferRepository offers) {
         this.aiServiceClient = aiServiceClient;
         this.users = users;
         this.analyses = analyses;
+        this.offers = offers;
     }
 
     @PostMapping
@@ -34,8 +37,10 @@ public class AnalysisController {
         Map<?, ?> response = aiServiceClient.analyze(request);
         Object result = response.get("result");
         if (result instanceof Map<?, ?> resultMap && resultMap.get("compatibility_score") instanceof Number score) {
-            users.findByEmailIgnoreCase(authentication.getName())
-                    .ifPresent(user -> analyses.save(new AnalysisRecord(user, score.doubleValue())));
+            users.findByEmailIgnoreCase(authentication.getName()).ifPresent(user -> {
+                var offer = request.job_offer_id() == null ? null : offers.findById(request.job_offer_id()).orElse(null);
+                analyses.save(new AnalysisRecord(user, offer, score.doubleValue()));
+            });
         }
         return ResponseEntity.ok(response);
     }

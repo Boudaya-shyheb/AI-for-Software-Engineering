@@ -10,10 +10,11 @@ public record JobOfferResponse(
         String location,
         String employmentType,
         String description,
+        boolean active,
         Instant createdAt,
         Instant updatedAt) {
     public static JobOfferResponse from(JobOffer offer) {
         return new JobOfferResponse(offer.getId(), offer.getTitle(), offer.getCompany(), offer.getLocation(),
-                offer.getEmploymentType(), offer.getDescription(), offer.getCreatedAt(), offer.getUpdatedAt());
+                offer.getEmploymentType(), offer.getDescription(), offer.isActive(), offer.getCreatedAt(), offer.getUpdatedAt());
     }
 }
