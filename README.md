@@ -1,6 +1,8 @@
-# AI Career Agent
+# AI Career Agent — CareerLens
 
 AI Career Agent is a full-stack project that compares a candidate's CV text with a job description and produces a compatibility score, matching skills, and a plain-language summary. The solution is built as a three-part system:
+
+Plateforme moderne d’analyse de CV et de matching d’offres d’emploi. Elle combine un frontend Angular, une API Spring Boot sécurisée par JWT, un service IA FastAPI et PostgreSQL.
 
 - Frontend: Angular app for interaction and report display
 - Backend: Spring Boot API that exposes endpoints and forwards requests to the AI service
@@ -214,7 +216,7 @@ Important note:
 
 ### 2) Backend
 
-Base URL: http://localhost:8080
+Base URL: http://localhost:8081
 
 Endpoint:
 - POST /api/analyses
@@ -237,9 +239,9 @@ When using Docker Compose, the project runs these containers:
 | Service | URL | Purpose |
 | --- | --- | --- |
 | Frontend | http://localhost:5173 | User interface |
-| Backend | http://localhost:8080 | Spring API gateway |
+| Backend | http://localhost:8081 | Spring API gateway |
 | AI service | http://localhost:8000/docs | FastAPI app and Swagger UI |
-| PostgreSQL | localhost:5432 | Data store for future persistence and integration |
+| PostgreSQL | localhost:5432 | Users, job offers, and analysis history |
 
 ## Environment Variables
 
@@ -256,7 +258,7 @@ The Docker Compose setup defines these core environment settings:
 - SPRING_DATASOURCE_PASSWORD=career
 
 ### Frontend
-- VITE_API_URL=http://localhost:8080/api
+- VITE_API_URL=http://localhost:8081/api
 
 ## Running the Project
 
@@ -276,7 +278,7 @@ This starts all services together:
 
 Then open:
 - Frontend: http://localhost:5173
-- Backend health: http://localhost:8080/health
+- Backend health: http://localhost:8081/actuator/health
 - AI service docs: http://localhost:8000/docs
 
 ### Option 2: Run services individually
@@ -334,7 +336,7 @@ This project is a working demonstration rather than a full production-grade recr
 
 - The AI service computes a deterministic score using a combination of lexical and semantic features.
 - It extracts keyword-style terms rather than deeply parsing full CV semantics.
-- The PostgreSQL database is prepared in Docker Compose but is not yet central to the current request flow.
+- PostgreSQL stores user accounts, job offers, and analysis history.
 - The frontend is intentionally simple and focused on demonstrating the analysis pipeline.
 - The system is designed to be extendable with richer parsing, resume extraction, LLM explanations, and database-backed results.
 
@@ -344,7 +346,7 @@ This project is a working demonstration rather than a full production-grade recr
 - More advanced skill extraction using NLP pipelines or LLMs
 - Persistent analysis storage in PostgreSQL
 - Job recommendation and candidate ranking histories
-- User authentication and saved profiles
+- Saved candidate profiles and reusable CVs
 - Better explanation generation and richer analytics dashboards
 
 ## Example Request
@@ -352,7 +354,7 @@ This project is a working demonstration rather than a full production-grade recr
 You can test the backend from the command line using curl:
 
 ```bash
-curl -X POST http://localhost:8080/api/analyses \
+curl -X POST http://localhost:8081/api/analyses \
   -H "Content-Type: application/json" \
   -d '{
     "cv_text": "Software engineer with Java, Spring Boot, REST APIs, and PostgreSQL experience.",
@@ -370,3 +372,54 @@ AI Career Agent demonstrates how a modern AI-enabled recruitment workflow can be
 - containerized deployment for easy local setup
 
 It is a practical starting point for building a smarter candidate-to-role matching solution.
+
+## Current application features
+
+### Quick start
+
+```bash
+docker compose up --build -d
+```
+
+Ouvrir ensuite http://localhost:5173.
+
+Services disponibles :
+
+- Frontend Angular : http://localhost:5173
+- API Spring Boot : http://localhost:8081/actuator/health
+- Service IA FastAPI : http://localhost:8000/docs
+- PostgreSQL : localhost:5432
+
+Le premier build du service IA peut prendre quelques minutes, car il installe PyTorch CPU et les modèles de traitement du langage.
+
+## Authentification et administration
+
+Les visiteurs peuvent créer un compte utilisateur depuis la page d’inscription. Toutes les fonctions d’analyse et d’upload nécessitent une connexion.
+
+Compte administrateur de développement :
+
+- Email : `ahmed@admin.com`
+- Mot de passe : `ahmed123`
+
+Compte utilisateur de développement :
+
+- Email : `user@user.com`
+- Mot de passe : `user123`
+
+Le tableau de bord admin affiche le nombre d’utilisateurs, les analyses enregistrées et la liste des comptes. Changez obligatoirement `ADMIN_PASSWORD` et `JWT_SECRET` dans `docker-compose.yml` ou via des variables d’environnement avant tout déploiement réel.
+
+## Upload et analyse
+
+Les deux zones acceptent la saisie manuelle ou l’import d’un document :
+
+- CV : PDF, DOCX ou TXT ;
+- offre d’emploi : PDF, DOCX ou TXT ;
+- taille maximale : 10 Mo par fichier.
+
+Le texte extrait reste modifiable avant de lancer l’analyse. Le score retourné est un **AI Compatibility Score** explicable ; il ne représente pas une probabilité d’embauche.
+
+## Offres d’emploi
+
+Le compte administrateur dispose d’un CRUD complet pour publier, modifier et supprimer les offres. Chaque offre contient un titre, une entreprise, une localisation, un type de contrat et une description détaillée.
+
+ Les utilisateurs retrouvent les offres publiées dans la page **Job offers**. Après avoir choisi une offre, ils peuvent importer leur CV puis lancer directement le matching IA avec la description enregistrée.

@@ -13,4 +13,7 @@ def extract_cv_text(file_path: str) -> dict:
         from docx import Document
         text = '\n'.join(paragraph.text for paragraph in Document(str(path)).paragraphs)
         return {'text': text, 'pages': 1, 'characters': len(text)}
-    raise ValueError('Unsupported CV format; expected PDF or DOCX')
+    if path.suffix.lower() == '.txt':
+        text = path.read_text(encoding='utf-8', errors='replace')
+        return {'text': text, 'pages': 1, 'characters': len(text)}
+    raise ValueError('Unsupported document format; expected PDF, DOCX or TXT')

@@ -30,6 +30,11 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ai_career_agent
       SPRING_DATASOURCE_USERNAME: career
       SPRING_DATASOURCE_PASSWORD: career
+      JWT_SECRET: career-lens-docker-secret-key-change-in-production-2026
+      ADMIN_EMAIL: ahmed@admin.com
+      ADMIN_PASSWORD: ahmed123
+      DEFAULT_USER_EMAIL: user@user.com
+      DEFAULT_USER_PASSWORD: user123
     ports:
       - "8081:8080"
     depends_on:
@@ -41,9 +46,9 @@ services:
   frontend:
     build: ./frontend
     environment:
-      VITE_API_URL: http://localhost:8080/api
+      VITE_API_URL: http://localhost:8081/api
     ports:
-      - "5173:4200"
+      - "5173:5173"
     depends_on:
       - backend
 

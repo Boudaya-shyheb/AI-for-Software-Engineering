@@ -1,12 +1,198 @@
-<main>
-  <header><p class="eyebrow">AI CAREER AGENT / ANALYSIS LAB</p><span class="status"><i></i> deterministic pipeline online</span></header>
-  <section class="intro"><div><h1>Make the match<br><em>visible.</em></h1><p class="lead">A transparent comparison between your experience and the role ahead, powered by lexical and semantic AI.</p></div><div class="score-ghost">AI<br>01</div></section>
-  <form (ngSubmit)="analyze()" class="analysis-grid">
-    <label><span>01 / Candidate profile</span><textarea required [(ngModel)]="cvText" name="cvText" placeholder="Paste your CV text here..."></textarea></label>
-    <label><span>02 / Target role</span><textarea required [(ngModel)]="jobDescription" name="jobDescription" placeholder="Paste the job description here..."></textarea></label>
-    <div class="actions"><button type="submit" [disabled]="loading()">{{ loading() ? 'Agent processing...' : 'Run AI analysis →' }}</button><small>TF-IDF · embeddings · deterministic score</small></div>
-  </form>
-  <div *ngIf="loading()" class="progress"><b>Agent processing</b><span>Validating inputs</span><span>Calculating semantic similarity</span><span>Building explainable report</span></div>
-  <p *ngIf="error()" class="error">{{ error() }}</p>
-  <section *ngIf="result() as analysisResult" class="result"><div class="result-header"><div><p class="eyebrow">03 / Your report</p><h2>{{ compatibilityScore() }}%</h2><p>AI Compatibility Score</p></div><div class="models"><span>TF-IDF <b>{{ score(analysisResult.models?.tfidf?.similarity) }}%</b></span><span>Sentence Transformer <b>{{ score(analysisResult.models?.embeddings?.similarity) }}%</b></span></div></div><div class="report-columns"><div><h3>What aligns</h3><p *ngFor="let skill of analysisResult.skills?.matching_skills" class="match">✓ {{ skill.job_skill }}</p></div><div><h3>Skill gaps</h3><p *ngFor="let skill of analysisResult.skills?.missing_required_skills" class="gap">△ {{ skill }}</p></div><div><h3>Agent note</h3><p>{{ analysisResult.ai_explanation?.summary }}</p></div></div></section>
-</main>
+<section *ngIf="!user()" class="auth-page">
+  <div class="auth-visual">
+    <a class="brand auth-brand" href="#"><span class="brand-mark">↗</span><span>Career<span>Lens</span></span></a>
+    <div class="auth-message"><p class="kicker"><span>AI-powered</span> career intelligence</p><h1>Your next role<br>starts with <em>clarity.</em></h1><p>Understand your strengths, uncover skill gaps and make every application more intentional.</p></div>
+    <div class="auth-proof"><span>✓</span><p><b>Transparent scoring</b><small>Every result is explainable and actionable.</small></p></div>
+  </div>
+  <div class="auth-panel">
+    <div class="auth-card">
+      <div class="auth-tabs"><button type="button" [class.active]="authMode() === 'login'" (click)="switchAuthMode('login')">Sign in</button><button type="button" [class.active]="authMode() === 'register'" (click)="switchAuthMode('register')">Create account</button></div>
+      <div class="auth-heading"><h2>{{ authMode() === 'login' ? 'Welcome back' : 'Create your account' }}</h2><p>{{ authMode() === 'login' ? 'Sign in to continue to your workspace.' : 'Start building smarter career applications.' }}</p></div>
+      <form #authForm="ngForm" (ngSubmit)="submitAuth()" class="auth-form">
+        <label *ngIf="authMode() === 'register'"><span>Full name</span><input required maxlength="100" [(ngModel)]="fullName" name="fullName" placeholder="Your full name"></label>
+        <label><span>Email address</span><input required type="email" [(ngModel)]="email" name="email" placeholder="name@company.com"></label>
+        <label><span>Password</span><input required [minlength]="authMode() === 'register' ? 8 : 1" type="password" [(ngModel)]="password" name="password" [placeholder]="authMode() === 'register' ? 'Minimum 8 characters' : 'Your password'"></label>
+        <div *ngIf="authError()" class="auth-error">{{ authError() }}</div>
+        <button class="auth-submit" type="submit" [disabled]="authForm.invalid || authLoading()"><span *ngIf="authLoading()" class="button-spinner"></span>{{ authLoading() ? 'Please wait…' : (authMode() === 'login' ? 'Sign in to CareerLens' : 'Create my account') }}</button>
+      </form>
+      <p class="admin-hint">Administrator access: <b>ahmed@admin.com</b></p>
+    </div>
+  </div>
+</section>
+
+<div *ngIf="user() as currentUser" class="app-shell">
+  <nav class="topbar" aria-label="Main navigation">
+    <a class="brand" href="#top" aria-label="CareerLens home">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
+      <span>Career<span>Lens</span></span>
+    </a>
+    <div class="nav-actions">
+      <button type="button" class="nav-link" [class.active]="currentView() === 'analyzer'" (click)="showAnalyzer()">Analyzer</button>
+      <button type="button" class="nav-link" [class.active]="currentView() === 'jobs'" (click)="openJobs()">Job offers</button>
+      <button *ngIf="currentUser.role === 'ADMIN'" type="button" class="nav-link" [class.active]="currentView() === 'admin'" (click)="openAdmin()">Admin</button>
+      <div class="user-menu"><span>{{ currentUser.fullName.charAt(0).toUpperCase() }}</span><div><b>{{ currentUser.fullName }}</b><small>{{ currentUser.role }}</small></div><button type="button" title="Sign out" (click)="logout()">↗</button></div>
+    </div>
+  </nav>
+
+  <main id="top">
+    <section *ngIf="currentView() === 'analyzer'" class="hero">
+      <div class="hero-copy">
+        <p class="kicker"><span>AI-powered</span> career intelligence</p>
+        <h1>See how well you<br><em>fit the role.</em></h1>
+        <p class="hero-text">Compare your experience with any job description and get a clear, explainable compatibility report in seconds.</p>
+        <div class="hero-points" aria-label="Analysis features">
+          <span><i>01</i> Semantic analysis</span><span><i>02</i> Skill gap detection</span><span><i>03</i> Actionable insights</span>
+        </div>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+        <div class="visual-card card-primary"><span class="mini-label">MATCH POTENTIAL</span><strong>87<span>%</span></strong><div class="mini-bars"><i></i><i></i><i></i><i></i></div></div>
+        <div class="visual-card card-float"><span class="check">✓</span><div><b>Skills aligned</b><small>12 competencies found</small></div></div>
+      </div>
+    </section>
+
+    <section *ngIf="currentView() === 'analyzer'" class="analyzer" aria-labelledby="analyzer-title">
+      <div class="section-heading">
+        <div><p class="section-number">01 — ANALYZE</p><h2 id="analyzer-title">Build your compatibility report</h2></div>
+        <p>Paste your information below. Your data is used only to generate this analysis.</p>
+      </div>
+      <form #analysisForm="ngForm" (ngSubmit)="analyze()" class="analysis-form">
+        <label class="input-card">
+          <span class="input-heading"><span class="input-icon">CV</span><span><b>Your profile</b><small>Resume or professional summary</small></span></span>
+          <span class="upload-row"><input #cvFile hidden type="file" accept=".pdf,.docx,.txt" (change)="uploadDocument($event, 'cv')"><button type="button" (click)="cvFile.click()" [disabled]="uploadingCv()"><span>{{ uploadingCv() ? '…' : '↑' }}</span>{{ uploadingCv() ? 'Extracting text…' : 'Upload CV' }}</button><small *ngIf="cvFilename()">✓ {{ cvFilename() }}</small><small *ngIf="!cvFilename()">PDF, DOCX or TXT · max 10 MB</small></span>
+          <textarea required [(ngModel)]="cvText" name="cvText" placeholder="Paste your CV, skills and experience here..."></textarea>
+          <span class="input-footer"><span>Plain text</span><span>{{ cvText.length }} characters</span></span>
+        </label>
+        <label class="input-card">
+          <span class="input-heading"><span class="input-icon role-icon">JD</span><span><b>Target role</b><small>The opportunity you are applying for</small></span></span>
+          <span class="upload-row"><input #jobFile hidden type="file" accept=".pdf,.docx,.txt" (change)="uploadDocument($event, 'job')"><button type="button" (click)="jobFile.click()" [disabled]="uploadingJob()"><span>{{ uploadingJob() ? '…' : '↑' }}</span>{{ uploadingJob() ? 'Extracting text…' : 'Upload job offer' }}</button><small *ngIf="jobFilename()">✓ {{ jobFilename() }}</small><small *ngIf="!jobFilename()">PDF, DOCX or TXT · max 10 MB</small></span>
+          <textarea required [(ngModel)]="jobDescription" name="jobDescription" placeholder="Paste the job description here..."></textarea>
+          <span class="input-footer"><span>Job requirements</span><span>{{ jobDescription.length }} characters</span></span>
+        </label>
+        <div class="form-action">
+          <button type="submit" [disabled]="loading() || analysisForm.invalid">
+            <span *ngIf="loading()" class="button-spinner" aria-hidden="true"></span>
+            <svg *ngIf="!loading()" viewBox="0 0 24 24" aria-hidden="true"><path d="m13 5 7 7-7 7M4 12h16"/></svg>
+            {{ loading() ? 'Analyzing your profile…' : 'Generate my report' }}
+          </button>
+          <p><span class="shield">✓</span> Explainable and deterministic scoring</p>
+        </div>
+      </form>
+    </section>
+
+    <section *ngIf="(currentView() === 'analyzer' || currentView() === 'jobs') && loading()" class="processing" aria-live="polite">
+      <div class="processing-head"><div class="pulse-mark"><i></i><i></i><i></i></div><div><b>Creating your report</b><span>This usually takes a few seconds</span></div><strong>AI</strong></div>
+      <div class="processing-line"><i></i></div>
+      <div class="processing-steps"><span class="active"><b>01</b>Reading inputs</span><span class="active"><b>02</b>Comparing skills</span><span><b>03</b>Building insights</span></div>
+    </section>
+
+    <section *ngIf="currentView() === 'jobs'" class="jobs-page">
+      <div class="jobs-heading">
+        <div><p class="section-number">OPEN OPPORTUNITIES</p><h1>{{ selectedOffer() ? selectedOffer()?.title : 'Find your next opportunity' }}</h1><p>{{ selectedOffer() ? selectedOffer()?.company + ' · ' + selectedOffer()?.location : 'Explore available roles and instantly compare your CV with the requirements.' }}</p></div>
+        <button *ngIf="selectedOffer()" type="button" class="secondary-button" (click)="closeOffer()">← All offers</button>
+      </div>
+
+      <div *ngIf="offersLoading()" class="admin-loading"><span class="button-spinner"></span> Loading job offers…</div>
+
+      <ng-container *ngIf="!offersLoading() && !selectedOffer()">
+        <div *ngIf="!jobOffers().length" class="empty-jobs"><span>◎</span><h2>No job offers yet</h2><p>The administrator has not published an opportunity yet.</p></div>
+        <div *ngIf="jobOffers().length" class="job-grid">
+          <article *ngFor="let offer of jobOffers()" class="job-card">
+            <div class="job-card-top"><span>{{ offer.company.charAt(0).toUpperCase() }}</span><small>{{ offer.createdAt | date:'mediumDate' }}</small></div>
+            <h2>{{ offer.title }}</h2><p class="job-company">{{ offer.company }}</p>
+            <div class="job-meta"><span>⌖ {{ offer.location }}</span><span>{{ offer.employmentType }}</span></div>
+            <p class="job-excerpt">{{ offer.description }}</p>
+            <button type="button" (click)="selectOffer(offer)">View offer & match CV <span>→</span></button>
+          </article>
+        </div>
+      </ng-container>
+
+      <div *ngIf="selectedOffer() as offer" class="job-match-layout">
+        <article class="offer-detail">
+          <div class="offer-company-mark">{{ offer.company.charAt(0).toUpperCase() }}</div>
+          <p class="section-number">JOB DESCRIPTION</p><h2>{{ offer.title }}</h2><p class="job-company">{{ offer.company }}</p>
+          <div class="job-meta"><span>⌖ {{ offer.location }}</span><span>{{ offer.employmentType }}</span></div>
+          <div class="offer-description">{{ offer.description }}</div>
+        </article>
+        <form class="job-match-card" (ngSubmit)="matchSelectedOffer()">
+          <span class="match-icon">AI</span><p class="section-number">INSTANT MATCH</p><h2>Compare your CV</h2><p>Upload your CV and our AI will measure its compatibility with this specific role.</p>
+          <input #matchCv hidden type="file" accept=".pdf,.docx,.txt" (change)="uploadDocument($event, 'cv')">
+          <button class="match-upload" type="button" (click)="matchCv.click()" [disabled]="uploadingCv()"><span>{{ uploadingCv() ? '…' : '↑' }}</span><div><b>{{ uploadingCv() ? 'Extracting your CV…' : 'Upload your CV' }}</b><small>{{ cvFilename() || 'PDF, DOCX or TXT · max 10 MB' }}</small></div></button>
+          <textarea required [(ngModel)]="cvText" name="offerCvText" placeholder="Your extracted CV text will appear here…"></textarea>
+          <button class="match-submit" type="submit" [disabled]="loading() || !cvText.trim()"><span *ngIf="loading()" class="button-spinner"></span>{{ loading() ? 'Calculating match…' : 'See my matching result' }}</button>
+        </form>
+      </div>
+    </section>
+
+    <div *ngIf="error()" class="error-message" role="alert"><span>!</span><div><b>We couldn't complete the analysis</b><p>{{ error() }}</p></div></div>
+
+    <section *ngIf="visibleResult() as analysisResult" class="report" aria-labelledby="report-title">
+      <div class="section-heading report-heading">
+        <div><p class="section-number">02 — YOUR REPORT</p><h2 id="report-title">Compatibility overview</h2></div>
+        <span class="report-id">Analysis complete <i>✓</i></span>
+      </div>
+      <div class="report-summary">
+        <article class="score-card">
+          <div class="score-ring">
+            <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-track" cx="60" cy="60" r="52" pathLength="100"/><circle class="ring-value" cx="60" cy="60" r="52" pathLength="100" [attr.stroke-dasharray]="compatibilityScore() + ' 100'"/></svg>
+            <div><strong>{{ compatibilityScore() }}</strong><span>%</span></div>
+          </div>
+          <div class="score-copy"><span>OVERALL MATCH</span><h3>AI Compatibility Score</h3><p>A combined view of semantic relevance and detected skill alignment.</p></div>
+        </article>
+        <article class="model-card"><div class="model-top"><span>Lexical match</span><b>{{ score(analysisResult.models?.tfidf?.similarity) }}%</b></div><div class="metric-bar"><i [style.width.%]="score(analysisResult.models?.tfidf?.similarity)"></i></div><p>TF-IDF keyword similarity</p></article>
+        <article class="model-card violet"><div class="model-top"><span>Semantic match</span><b>{{ score(analysisResult.models?.embeddings?.similarity) }}%</b></div><div class="metric-bar"><i [style.width.%]="score(analysisResult.models?.embeddings?.similarity)"></i></div><p>Sentence Transformer context</p></article>
+      </div>
+      <div class="report-grid">
+        <article class="insight-card strengths">
+          <div class="card-title"><span>✓</span><div><h3>Matching skills</h3><p>What already aligns with the role</p></div></div>
+          <div class="skill-list" *ngIf="analysisResult.skills?.matching_skills?.length; else noMatches"><span *ngFor="let skill of analysisResult.skills.matching_skills">{{ skill.job_skill }}</span></div>
+          <ng-template #noMatches><p class="empty-state">No direct skill match was detected.</p></ng-template>
+        </article>
+        <article class="insight-card gaps">
+          <div class="card-title"><span>↗</span><div><h3>Growth opportunities</h3><p>Skills to strengthen for this role</p></div></div>
+          <div class="skill-list" *ngIf="analysisResult.skills?.missing_required_skills?.length; else noGaps"><span *ngFor="let skill of analysisResult.skills.missing_required_skills">{{ skill }}</span></div>
+          <ng-template #noGaps><p class="empty-state">Excellent — no required skill gaps detected.</p></ng-template>
+        </article>
+        <article class="insight-card agent-note">
+          <div class="card-title"><span>AI</span><div><h3>Agent insight</h3><p>How to read your result</p></div></div>
+          <blockquote>{{ analysisResult.ai_explanation?.summary || 'Your report was calculated from the information provided.' }}</blockquote>
+          <p class="note-caption">This score measures compatibility and is not a hiring probability.</p>
+        </article>
+      </div>
+    </section>
+
+    <section *ngIf="currentView() === 'admin'" class="admin-dashboard">
+      <div class="admin-hero"><div><p class="section-number">ADMINISTRATION</p><h1>Workspace overview</h1><p>Monitor platform adoption and manage registered accounts.</p></div><span class="admin-badge">Protected area</span></div>
+      <div *ngIf="adminLoading()" class="admin-loading"><span class="button-spinner"></span> Loading dashboard…</div>
+      <ng-container *ngIf="!adminLoading()">
+        <div class="stat-grid"><article><span>Registered users</span><strong>{{ adminStats()?.users || 0 }}</strong><small>Total accounts</small></article><article><span>Job offers</span><strong>{{ adminStats()?.jobOffers || 0 }}</strong><small>Published opportunities</small></article><article><span>AI analyses</span><strong>{{ adminStats()?.analyses || 0 }}</strong><small>Reports generated</small></article><article><span>Service status</span><strong class="online-stat">Online</strong><small>All systems operational</small></article></div>
+
+        <div class="admin-offers-section">
+          <div class="users-card-head"><div><h2>Job offer management</h2><p>Create, edit and remove opportunities visible to users.</p></div><span>{{ adminOffers().length }} offers</span></div>
+          <div class="admin-offer-layout">
+            <form #offerForm="ngForm" class="offer-form" (ngSubmit)="saveOffer()">
+              <div class="offer-form-heading"><div><p class="section-number">{{ editingOfferId() ? 'EDIT OFFER' : 'NEW OFFER' }}</p><h3>{{ editingOfferId() ? 'Update opportunity' : 'Publish an opportunity' }}</h3></div><button *ngIf="editingOfferId()" type="button" (click)="resetOfferForm()">Cancel</button></div>
+              <label><span>Job title</span><input required maxlength="160" [(ngModel)]="offerTitle" name="offerTitle" placeholder="e.g. Full-stack Developer"></label>
+              <div class="offer-form-row"><label><span>Company</span><input required maxlength="140" [(ngModel)]="offerCompany" name="offerCompany" placeholder="Company name"></label><label><span>Location</span><input required maxlength="140" [(ngModel)]="offerLocation" name="offerLocation" placeholder="Tunis or Remote"></label></div>
+              <label><span>Employment type</span><select required [(ngModel)]="offerEmploymentType" name="offerEmploymentType"><option>CDI</option><option>CDD</option><option>Internship</option><option>Freelance</option><option>Part-time</option><option>Full-time</option></select></label>
+              <label><span>Full job description</span><textarea required maxlength="20000" [(ngModel)]="offerDescription" name="offerDescription" placeholder="Responsibilities, skills and experience required…"></textarea></label>
+              <p *ngIf="offerError()" class="offer-form-error">{{ offerError() }}</p>
+              <button class="offer-save" type="submit" [disabled]="offerForm.invalid || offerSaving()"><span *ngIf="offerSaving()" class="button-spinner"></span>{{ offerSaving() ? 'Saving…' : (editingOfferId() ? 'Save changes' : 'Publish offer') }}</button>
+            </form>
+            <div class="admin-offer-list">
+              <div *ngIf="!adminOffers().length" class="admin-offer-empty">No offers created yet.</div>
+              <article *ngFor="let offer of adminOffers()">
+                <div class="admin-offer-info"><span>{{ offer.company.charAt(0).toUpperCase() }}</span><div><h3>{{ offer.title }}</h3><p>{{ offer.company }} · {{ offer.location }} · {{ offer.employmentType }}</p><small>Created {{ offer.createdAt | date:'mediumDate' }}</small></div></div>
+                <div class="admin-offer-actions"><button type="button" (click)="editOffer(offer)">Edit</button><button type="button" class="delete" (click)="deleteOffer(offer)">Delete</button></div>
+              </article>
+            </div>
+          </div>
+        </div>
+
+        <div class="users-card"><div class="users-card-head"><div><h2>User accounts</h2><p>People with access to the CareerLens workspace.</p></div><span>{{ adminUsers().length }} accounts</span></div><div class="table-wrap"><table><thead><tr><th>User</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead><tbody><tr *ngFor="let account of adminUsers()"><td><span class="table-avatar">{{ account.fullName.charAt(0).toUpperCase() }}</span><b>{{ account.fullName }}</b></td><td>{{ account.email }}</td><td><span class="role-pill" [class.admin]="account.role === 'ADMIN'">{{ account.role }}</span></td><td>{{ account.createdAt | date:'mediumDate' }}</td></tr></tbody></table></div></div>
+      </ng-container>
+    </section>
+  </main>
+
+  <footer><a class="brand footer-brand" href="#top"><span class="brand-mark">↗</span><span>Career<span>Lens</span></span></a><p>Smarter career decisions, powered by transparent AI.</p><span>© 2026</span></footer>
+</div>

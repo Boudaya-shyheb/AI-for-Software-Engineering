@@ -1,6 +1,18 @@
 spring:
   application:
     name: ai-career-agent-backend
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/ai_career_agent}
+    username: ${SPRING_DATASOURCE_USERNAME:career}
+    password: ${SPRING_DATASOURCE_PASSWORD:career}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 management:
   endpoints:
     web:
@@ -10,3 +22,14 @@ server:
   port: 8080
 ai:
   service-url: ${AI_SERVICE_URL:http://localhost:8000}
+jwt:
+  secret: ${JWT_SECRET:career-lens-development-secret-key-change-me-2026}
+  expiration-ms: 86400000
+admin:
+  email: ${ADMIN_EMAIL:ahmed@admin.com}
+  password: ${ADMIN_PASSWORD:ahmed123}
+  name: ${ADMIN_NAME:Ahmed Admin}
+default-user:
+  email: ${DEFAULT_USER_EMAIL:user@user.com}
+  password: ${DEFAULT_USER_PASSWORD:user123}
+  name: ${DEFAULT_USER_NAME:CareerLens User}
