@@ -19,6 +19,8 @@ interface AuthUser {
 
 interface AuthPayload { token: string; user: AuthUser; }
 interface AdminStats { users: number; analyses: number; jobOffers: number; }
+interface AdminInterviewAnswer { question: string; type: string; score: number | null; feedback: string; strengths: string[]; improvements: string[]; }
+interface AdminInterviewResult { id: number; candidateName: string; candidateEmail: string; offerTitle: string; company: string; status: 'COMPLETED' | 'IN_PROGRESS'; score: number | null; answeredQuestions: number; totalQuestions: number; createdAt: string; answers: AdminInterviewAnswer[]; strengths: string[]; weaknesses: string[]; recommendations: string[]; }
 
 interface JobOffer {
   id: number;
@@ -30,6 +32,11 @@ interface JobOffer {
   createdAt: string;
   updatedAt: string;
 }
+
+interface InterviewQuestion { type: string; question: string; }
+interface InterviewEvaluation { question: string; type: string; answer: string; score: number; feedback: string; strengths: string[]; improvements: string[]; }
+interface InterviewSummary { score: number; strengths: string[]; weaknesses: string[]; recommendations: string[]; }
+interface InterviewSession { id: number; offerId: number; offerTitle: string; company: string; questions: InterviewQuestion[]; profile: { matching_skills: string[]; skill_gaps: string[]; summary: string }; evaluations: InterviewEvaluation[]; currentQuestion: number; completed: boolean; summary: InterviewSummary | null; createdAt: string; evaluation?: InterviewEvaluation; }
 
 @Component({
   selector: 'app-root',
@@ -53,16 +60,24 @@ export class AppComponent {
   readonly authMode = signal<'login' | 'register'>('login');
   readonly authLoading = signal(false);
   readonly authError = signal('');
-  readonly currentView = signal<'analyzer' | 'jobs' | 'admin'>('analyzer');
+  readonly currentView = signal<'analyzer' | 'jobs' | 'interviews' | 'admin'>('analyzer');
   readonly uploadingCv = signal(false);
   readonly uploadingJob = signal(false);
   readonly cvFilename = signal('');
   readonly jobFilename = signal('');
   readonly adminStats = signal<AdminStats | null>(null);
   readonly adminUsers = signal<AuthUser[]>([]);
+  readonly adminInterviews = signal<AdminInterviewResult[]>([]);
   readonly adminLoading = signal(false);
   readonly jobOffers = signal<JobOffer[]>([]);
   readonly offersLoading = signal(false);
+  readonly interviewSessions = signal<InterviewSession[]>([]);
+  readonly interviewSession = signal<InterviewSession | null>(null);
+  readonly interviewLoading = signal(false);
+  readonly interviewError = signal('');
+  readonly interviewAnswer = signal('');
+  readonly interviewCv = signal('');
+  readonly interviewOfferId = signal<number | null>(null);
   readonly selectedOffer = signal<JobOffer | null>(null);
   readonly adminOffers = signal<JobOffer[]>([]);
   readonly editingOfferId = signal<number | null>(null);
@@ -176,15 +191,17 @@ export class AppComponent {
     this.adminLoading.set(true);
     this.error.set('');
     try {
-      const [statsResponse, usersResponse, offersResponse] = await Promise.all([
+      const [statsResponse, usersResponse, offersResponse, interviewsResponse] = await Promise.all([
         this.authorizedFetch(`${this.apiUrl}/admin/stats`),
         this.authorizedFetch(`${this.apiUrl}/admin/users`),
         this.authorizedFetch(`${this.apiUrl}/admin/job-offers`),
+        this.authorizedFetch(`${this.apiUrl}/admin/interviews`),
       ]);
-      if (!statsResponse.ok || !usersResponse.ok || !offersResponse.ok) throw new Error('Unable to load the admin dashboard.');
+      if (!statsResponse.ok || !usersResponse.ok || !offersResponse.ok || !interviewsResponse.ok) throw new Error('Unable to load the admin dashboard.');
       this.adminStats.set(await statsResponse.json() as AdminStats);
       this.adminUsers.set(await usersResponse.json() as AuthUser[]);
       this.adminOffers.set(await offersResponse.json() as JobOffer[]);
+      this.adminInterviews.set(await interviewsResponse.json() as AdminInterviewResult[]);
     } catch (adminError) {
       this.error.set(adminError instanceof Error ? adminError.message : 'Admin dashboard failed to load.');
     } finally {
@@ -198,6 +215,78 @@ export class AppComponent {
     this.result.set(null);
     this.error.set('');
     await this.loadJobOffers();
+  }
+
+  async openInterviews(): Promise<void> {
+    this.currentView.set('interviews');
+    this.interviewSession.set(null);
+    this.interviewError.set('');
+    await Promise.all([this.loadJobOffers(), this.loadInterviewHistory()]);
+  }
+
+  async loadInterviewHistory(): Promise<void> {
+    try {
+      const response = await this.authorizedFetch(`${this.apiUrl}/interviews`);
+      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to load interview history.'));
+      this.interviewSessions.set(await response.json() as InterviewSession[]);
+    } catch (error) {
+      this.interviewError.set(error instanceof Error ? error.message : 'Unable to load interview history.');
+    }
+  }
+
+  async startInterview(): Promise<void> {
+    if (this.interviewLoading()) return;
+    const offerId = this.interviewOfferId();
+    if (!offerId || !this.interviewCv().trim()) { this.interviewError.set('Select a job offer and provide your CV to start.'); return; }
+    this.interviewLoading.set(true); this.interviewError.set('');
+    try {
+      const response = await this.authorizedFetch(`${this.apiUrl}/interviews`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ offerId, cvText: this.interviewCv() }) });
+      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to generate interview questions.'));
+      this.interviewSession.set(await response.json() as InterviewSession);
+      await this.loadInterviewHistory();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error) { this.interviewError.set(error instanceof Error ? error.message : 'Unable to start the interview.'); }
+    finally { this.interviewLoading.set(false); }
+  }
+
+  async submitInterviewAnswer(): Promise<void> {
+    const session = this.interviewSession();
+    if (!session || !this.interviewAnswer().trim() || this.interviewLoading()) return;
+    this.interviewLoading.set(true); this.interviewError.set('');
+    try {
+      const response = await this.authorizedFetch(`${this.apiUrl}/interviews/${session.id}/answers`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answer: this.interviewAnswer() }) });
+      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to evaluate this answer.'));
+      const updated = await response.json() as InterviewSession;
+      this.interviewSession.set(updated); this.interviewAnswer.set('');
+      await this.loadInterviewHistory();
+    } catch (error) { this.interviewError.set(error instanceof Error ? error.message : 'Unable to submit this answer.'); }
+    finally { this.interviewLoading.set(false); }
+  }
+
+  async viewInterview(session: InterviewSession): Promise<void> {
+    this.interviewError.set(''); this.interviewLoading.set(true);
+    try {
+      const response = await this.authorizedFetch(`${this.apiUrl}/interviews/${session.id}`);
+      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to load this interview.'));
+      this.interviewSession.set(await response.json() as InterviewSession); this.interviewAnswer.set('');
+    } catch (error) { this.interviewError.set(error instanceof Error ? error.message : 'Unable to load this interview.'); }
+    finally { this.interviewLoading.set(false); }
+  }
+
+  setInterviewCv(event: Event): void { this.interviewCv.set((event.target as HTMLTextAreaElement).value); }
+  setInterviewOffer(event: Event): void { const value = (event.target as HTMLSelectElement).value; this.interviewOfferId.set(value ? Number(value) : null); }
+
+  async uploadInterviewCv(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement; const file = input.files?.[0]; if (!file) return;
+    this.interviewLoading.set(true); this.interviewError.set('');
+    try {
+      const form = new FormData(); form.append('file', file);
+      const response = await this.authorizedFetch(`${this.apiUrl}/documents/extract`, { method: 'POST', body: form });
+      if (!response.ok) throw new Error(await this.responseError(response, 'The CV could not be imported.'));
+      const payload = await response.json() as { text: string };
+      this.interviewCv.set(payload.text);
+    } catch (error) { this.interviewError.set(error instanceof Error ? error.message : 'The CV could not be imported.'); }
+    finally { this.interviewLoading.set(false); input.value = ''; }
   }
 
   async loadJobOffers(): Promise<void> {

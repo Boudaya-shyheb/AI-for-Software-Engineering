@@ -36,6 +36,23 @@ public class AiServiceClient {
                 .body(Map.class);
     }
 
+    public Map<?, ?> generateInterview(String cvText, String jobDescription, int questionCount) {
+        return client.post().uri("/api/interviews/generate").contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("cv_text", cvText, "job_description", jobDescription, "question_count", questionCount))
+                .retrieve().body(Map.class);
+    }
+
+    public Map<?, ?> evaluateInterviewAnswer(String question, String answer, String cvText, String jobDescription, String type) {
+        return client.post().uri("/api/interviews/evaluate").contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("question", question, "answer", answer, "cv_text", cvText, "job_description", jobDescription, "question_type", type))
+                .retrieve().body(Map.class);
+    }
+
+    public Map<?, ?> summarizeInterview(java.util.List<?> evaluations) {
+        return client.post().uri("/api/interviews/summary").contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("evaluations", evaluations)).retrieve().body(Map.class);
+    }
+
     public Map<?, ?> extractDocument(MultipartFile file) throws IOException {
         ByteArrayResource resource = new ByteArrayResource(file.getBytes()) {
             @Override public String getFilename() { return file.getOriginalFilename(); }
