@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { animate, stagger } from 'motion';
+import { ThreeSceneComponent } from './three-scene.component';
 
 interface AnalysisResult {
   compatibility_score: number;
@@ -41,7 +43,7 @@ interface ApplicationItem { id: number; jobOfferId: number; jobTitle: string; co
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ThreeSceneComponent],
   templateUrl: './app.component.html',
   styleUrl: './styles.css',
 })
@@ -58,9 +60,14 @@ export class AppComponent {
   readonly token = signal(localStorage.getItem('careerlens_token') ?? '');
   readonly user = signal<AuthUser | null>(this.readStoredUser());
   readonly authMode = signal<'login' | 'register'>('login');
+  readonly publicView = signal<'landing' | 'auth'>('landing');
+  // Always open on the public home page, even when a valid session is restored.
+  readonly marketingPreview = signal(true);
   readonly authLoading = signal(false);
   readonly authError = signal('');
   readonly currentView = signal<'analyzer' | 'jobs' | 'applications' | 'history' | 'profile' | 'admin'>('analyzer');
+  readonly sidebarCollapsed = signal(false);
+  readonly mobileSidebarOpen = signal(false);
   readonly uploadingCv = signal(false);
   readonly uploadingJob = signal(false);
   readonly cvFilename = signal('');
@@ -108,6 +115,14 @@ export class AppComponent {
   profileSkills = '';
   profilePreferences = '';
   readonly visibleResult = computed(() => this.currentView() === 'analyzer' || this.currentView() === 'jobs' ? this.result() : null);
+  private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly continuousMotionElements = new WeakSet<Element>();
+  private readonly viewMotion = effect(() => {
+    this.publicView();
+    this.currentView();
+    this.adminSection();
+    window.setTimeout(() => this.animateCurrentView(), 0);
+  });
   readonly applicationChartData = computed(() => {
     const definitions = [
       { status: 'SENT', label: 'Envoyées', color: '#4d73e8' },
@@ -159,6 +174,8 @@ export class AppComponent {
       localStorage.setItem('careerlens_user', JSON.stringify(payload.user));
       this.token.set(payload.token);
       this.user.set(payload.user);
+      this.publicView.set('landing');
+      this.marketingPreview.set(false);
       this.password = '';
     } catch (authError) {
       this.authError.set(authError instanceof Error ? authError.message : 'Authentication failed');
@@ -172,6 +189,44 @@ export class AppComponent {
     this.authError.set('');
   }
 
+  openAuth(mode: 'login' | 'register'): void {
+    this.authMode.set(mode);
+    this.authError.set('');
+    this.publicView.set('auth');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  showLanding(): void {
+    this.publicView.set('landing');
+    this.marketingPreview.set(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  openMarketing(): void {
+    this.publicView.set('landing');
+    this.marketingPreview.set(true);
+    this.closeMobileSidebar();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  returnToApplication(): void {
+    this.marketingPreview.set(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  openFromLanding(view: 'analyzer' | 'jobs' | 'applications' | 'history' | 'profile' | 'admin'): void {
+    if (!this.user()) { this.openAuth('login'); return; }
+    this.returnToApplication();
+    window.setTimeout(() => {
+      if (view === 'analyzer') this.showAnalyzer();
+      else if (view === 'jobs') void this.openJobs();
+      else if (view === 'applications') void this.openApplications();
+      else if (view === 'history') void this.openHistory();
+      else if (view === 'profile') void this.openProfile();
+      else if (view === 'admin' && this.user()?.role === 'ADMIN') void this.openAdmin();
+    }, 0);
+  }
+
   logout(): void {
     this.stopApplicationsRefresh();
     localStorage.removeItem('careerlens_token');
@@ -180,6 +235,8 @@ export class AppComponent {
     this.user.set(null);
     this.result.set(null);
     this.currentView.set('analyzer');
+    this.publicView.set('landing');
+    this.marketingPreview.set(false);
   }
 
   async analyze(): Promise<void> {
@@ -463,6 +520,73 @@ export class AppComponent {
     return ({ SENT: '↗', REVIEWED: '◉', INTERVIEW: '◷', ACCEPTED: '✓', REJECTED: '×', WITHDRAWN: '−' } as Record<string, string>)[status] ?? '•';
   }
 
+  selectAdminSection(section: 'overview' | 'applications' | 'offers' | 'users'): void {
+    this.adminSection.set(section);
+  }
+
+  toggleSidebar(): void { this.sidebarCollapsed.update(value => !value); }
+  closeMobileSidebar(): void { this.mobileSidebarOpen.set(false); }
+
+  currentViewLabel(): string {
+    return ({ analyzer: 'Matching IA', jobs: 'Offres d’emploi', applications: 'Mes candidatures', history: 'Historique', profile: 'Mon profil', admin: 'Administration' } as const)[this.currentView()];
+  }
+
+  private animateCurrentView(): void {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const root = this.host.nativeElement as HTMLElement;
+    const targets = Array.from(root.querySelectorAll<HTMLElement>(
+      '.landing-hero-copy > *, .landing-visual, .landing-logo-strip > *, .landing-section-heading, .landing-steps > *, .landing-bento > *, .landing-cta > *, .auth-brand, .auth-message > *, .auth-proof, .auth-card > *, main > section:not(.processing) > .jobs-heading, main > section:not(.processing) > .section-heading, .hero > *, .analysis-form > *, .job-filters, .job-grid > *, .offer-detail, .job-match-card, .application-grid > *, .history-list > *, .profile-layout > *, .admin-main > .admin-hero, .admin-main .stat-grid > *, .dashboard-charts > *, .admin-overview-actions > *, .admin-applications, .admin-offers-section, .admin-main > .users-card'
+    )).filter(element => element.offsetParent !== null);
+    if (!targets.length) return;
+    animate(targets, { opacity: [0, 1], y: [18, 0], scale: [.985, 1] }, {
+      duration: .5,
+      delay: stagger(.035),
+      ease: [.16, 1, .3, 1],
+    });
+    const floatingPieces = root.querySelectorAll<HTMLElement>('.landing-float-piece');
+    if (floatingPieces.length) animate(floatingPieces, {
+      y: [-8, 12, -8],
+      rotate: [-5, 7, -5],
+    }, { duration: 5.5, delay: stagger(.35), repeat: Infinity, ease: 'easeInOut' });
+    const orbitRings = root.querySelectorAll<HTMLElement>('.landing-orbit-ring');
+    if (orbitRings.length) animate(orbitRings, { rotate: [0, 360] }, {
+      duration: 24,
+      delay: stagger(1.5),
+      repeat: Infinity,
+      ease: 'linear',
+    });
+    const authPieces = root.querySelectorAll<HTMLElement>('.auth-float-piece');
+    if (authPieces.length) animate(authPieces, {
+      y: [-7, 11, -7],
+      rotate: [-4, 5, -4],
+    }, { duration: 5, delay: stagger(.45), repeat: Infinity, ease: 'easeInOut' });
+    const authOrbits = root.querySelectorAll<HTMLElement>('.auth-orbit');
+    if (authOrbits.length) animate(authOrbits, { rotate: [0, 360] }, {
+      duration: 28,
+      delay: stagger(2),
+      repeat: Infinity,
+      ease: 'linear',
+    });
+    const workspacePieces = Array.from(root.querySelectorAll<HTMLElement>('.workspace-float-piece')).filter(element => {
+      if (this.continuousMotionElements.has(element)) return false;
+      this.continuousMotionElements.add(element); return true;
+    });
+    if (workspacePieces.length) animate(workspacePieces, {
+      y: [-6, 10, -6],
+      rotate: [-3, 5, -3],
+    }, { duration: 6, delay: stagger(.55), repeat: Infinity, ease: 'easeInOut' });
+    const workspaceOrbits = Array.from(root.querySelectorAll<HTMLElement>('.workspace-orbit')).filter(element => {
+      if (this.continuousMotionElements.has(element)) return false;
+      this.continuousMotionElements.add(element); return true;
+    });
+    if (workspaceOrbits.length) animate(workspaceOrbits, { rotate: [0, 360] }, {
+      duration: 32,
+      delay: stagger(2.5),
+      repeat: Infinity,
+      ease: 'linear',
+    });
+  }
+
   async loadJobOffers(): Promise<void> {
     this.offersLoading.set(true);
     try {
@@ -584,7 +708,7 @@ export class AppComponent {
     this.jobOffers.set(this.adminOffers().filter(offer => offer.active));
   }
 
-  showAnalyzer(): void { this.currentView.set('analyzer'); }
+  showAnalyzer(): void { this.currentView.set('analyzer'); this.closeMobileSidebar(); }
   get apiUrl(): string { return '/api'; }
   score(value: number | undefined): number { return Math.round((value ?? 0) * 100); }
   compatibilityScore(): number { return Math.round((this.result()?.compatibility_score ?? 0) * 1000) / 10; }
