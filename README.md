@@ -330,6 +330,17 @@ The tests cover:
 - skill matching logic
 - completion of a full agent analysis response
 
+The hotel booking exercise adds unit tests for the room-pricing rules and a French
+Gherkin specification for the login scenarios. To check the booking-engine test
+coverage, run from `ai-service`:
+
+```bash
+pytest tests/test_booking.py --cov=booking_engine --cov-branch --cov-report=term-missing
+```
+
+The target is 100% statement and branch coverage for `booking_engine.py`. The
+login scenarios are documented in `ai-service/features/connexion.feature`.
+
 ## Notes on Current Implementation
 
 This project is a working demonstration rather than a full production-grade recruiter system. Some important practical notes:

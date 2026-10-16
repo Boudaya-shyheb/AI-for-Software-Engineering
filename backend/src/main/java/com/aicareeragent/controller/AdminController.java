@@ -6,6 +6,7 @@ import com.aicareeragent.service.AdminInterviewService;
 import com.aicareeragent.repository.AnalysisRecordRepository;
 import com.aicareeragent.repository.JobOfferRepository;
 import com.aicareeragent.repository.UserRepository;
+import com.aicareeragent.repository.JobApplicationRepository;
 import java.util.List;
 import java.util.Map;
 import org.springframework.data.domain.Sort;
@@ -20,17 +21,20 @@ public class AdminController {
     private final AnalysisRecordRepository analyses;
     private final JobOfferRepository offers;
     private final AdminInterviewService interviews;
+    private final JobApplicationRepository applications;
 
-    public AdminController(UserRepository users, AnalysisRecordRepository analyses, JobOfferRepository offers, AdminInterviewService interviews) {
+    public AdminController(UserRepository users, AnalysisRecordRepository analyses, JobOfferRepository offers, AdminInterviewService interviews, JobApplicationRepository applications) {
         this.users = users;
         this.analyses = analyses;
         this.offers = offers;
         this.interviews = interviews;
+        this.applications = applications;
+    }
     }
 
     @GetMapping("/stats")
     public Map<String, Long> stats() {
-        return Map.of("users", users.count(), "analyses", analyses.count(), "jobOffers", offers.count());
+        return Map.of("users", users.count(), "analyses", analyses.count(), "jobOffers", offers.count(), "applications", applications.count());
     }
 
     @GetMapping("/users")

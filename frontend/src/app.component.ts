@@ -1,12 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { animate, stagger } from 'motion';
+import { ThreeSceneComponent } from './three-scene.component';
 
 interface AnalysisResult {
   compatibility_score: number;
+  confidence?: number;
+  score_breakdown?: { skills?: number; semantic?: number; experience?: number; education?: number };
   models?: { tfidf?: { similarity?: number }; embeddings?: { similarity?: number } };
   skills?: { matching_skills?: Array<{ job_skill: string }>; missing_required_skills?: string[] };
-  ai_explanation?: { summary?: string };
+  ai_explanation?: { summary?: string; recommendations?: string[]; cv_improvements?: string[]; experience_analysis?: string };
 }
 
 interface AuthUser {
@@ -18,7 +22,7 @@ interface AuthUser {
 }
 
 interface AuthPayload { token: string; user: AuthUser; }
-interface AdminStats { users: number; analyses: number; jobOffers: number; }
+interface AdminStats { users: number; analyses: number; jobOffers: number; applications: number; }
 interface AdminInterviewAnswer { question: string; type: string; score: number | null; feedback: string; strengths: string[]; improvements: string[]; }
 interface AdminInterviewResult { id: number; candidateName: string; candidateEmail: string; offerTitle: string; company: string; status: 'COMPLETED' | 'IN_PROGRESS'; score: number | null; answeredQuestions: number; totalQuestions: number; createdAt: string; answers: AdminInterviewAnswer[]; strengths: string[]; weaknesses: string[]; recommendations: string[]; }
 
@@ -31,17 +35,21 @@ interface JobOffer {
   description: string;
   createdAt: string;
   updatedAt: string;
+  active: boolean;
 }
 
 interface InterviewQuestion { type: string; question: string; }
 interface InterviewEvaluation { question: string; type: string; answer: string; score: number; feedback: string; strengths: string[]; improvements: string[]; }
 interface InterviewSummary { score: number; strengths: string[]; weaknesses: string[]; recommendations: string[]; }
 interface InterviewSession { id: number; offerId: number; offerTitle: string; company: string; questions: InterviewQuestion[]; profile: { matching_skills: string[]; skill_gaps: string[]; summary: string }; evaluations: InterviewEvaluation[]; currentQuestion: number; completed: boolean; summary: InterviewSummary | null; createdAt: string; evaluation?: InterviewEvaluation; }
+interface CandidateProfile { id: number; fullName: string; email: string; headline: string; savedCvText: string; skills: string; preferences: string; }
+interface HistoryItem { id: number; compatibilityScore: number; jobOfferId: number | null; jobTitle: string; company: string; createdAt: string; }
+interface ApplicationItem { id: number; jobOfferId: number; jobTitle: string; company: string; location: string; userId: number; candidateName: string; candidateEmail: string; status: string; coverLetter: string; createdAt: string; updatedAt: string; }
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ThreeSceneComponent],
   templateUrl: './app.component.html',
   styleUrl: './styles.css',
 })
@@ -58,9 +66,14 @@ export class AppComponent {
   readonly token = signal(localStorage.getItem('careerlens_token') ?? '');
   readonly user = signal<AuthUser | null>(this.readStoredUser());
   readonly authMode = signal<'login' | 'register'>('login');
+  readonly publicView = signal<'landing' | 'auth'>('landing');
+  // Always open on the public home page, even when a valid session is restored.
+  readonly marketingPreview = signal(true);
   readonly authLoading = signal(false);
   readonly authError = signal('');
-  readonly currentView = signal<'analyzer' | 'jobs' | 'interviews' | 'admin'>('analyzer');
+  readonly currentView = signal<'analyzer' | 'jobs' | 'interviews' | 'applications' | 'history' | 'profile' | 'admin'>('analyzer');
+  readonly sidebarCollapsed = signal(false);
+  readonly mobileSidebarOpen = signal(false);
   readonly uploadingCv = signal(false);
   readonly uploadingJob = signal(false);
   readonly cvFilename = signal('');
@@ -69,6 +82,7 @@ export class AppComponent {
   readonly adminUsers = signal<AuthUser[]>([]);
   readonly adminInterviews = signal<AdminInterviewResult[]>([]);
   readonly adminLoading = signal(false);
+  readonly adminSection = signal<'overview' | 'applications' | 'offers' | 'users'>('overview');
   readonly jobOffers = signal<JobOffer[]>([]);
   readonly offersLoading = signal(false);
   readonly interviewSessions = signal<InterviewSession[]>([]);
@@ -88,7 +102,73 @@ export class AppComponent {
   offerLocation = '';
   offerEmploymentType = 'CDI';
   offerDescription = '';
+  jobSearch = '';
+  jobType = '';
+  readonly profile = signal<CandidateProfile | null>(null);
+  readonly profileLoading = signal(false);
+  readonly profileSaving = signal(false);
+  readonly profileMessage = signal('');
+  readonly history = signal<HistoryItem[]>([]);
+  readonly historyLoading = signal(false);
+  readonly applications = signal<ApplicationItem[]>([]);
+  readonly applicationsLoading = signal(false);
+  readonly applicationsRefreshing = signal(false);
+  readonly applicationsLastRefresh = signal<Date | null>(null);
+  readonly adminApplications = signal<ApplicationItem[]>([]);
+  readonly applicationSaving = signal(false);
+  readonly applicationMessage = signal('');
+  readonly adminApplicationMessage = signal('');
+  readonly applicationStatusUpdatingId = signal<number | null>(null);
+  readonly favoriteOfferIds = signal<number[]>([]);
+  readonly favoritesOnly = signal(false);
+  coverLetter = '';
+  private applicationsRefreshTimer: number | null = null;
+  profileFullName = '';
+  profileHeadline = '';
+  profileCv = '';
+  profileSkills = '';
+  profilePreferences = '';
   readonly visibleResult = computed(() => this.currentView() === 'analyzer' || this.currentView() === 'jobs' ? this.result() : null);
+  private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly continuousMotionElements = new WeakSet<Element>();
+  private readonly viewMotion = effect(() => {
+    this.publicView();
+    this.currentView();
+    this.adminSection();
+    window.setTimeout(() => this.animateCurrentView(), 0);
+  });
+  readonly applicationChartData = computed(() => {
+    const definitions = [
+      { status: 'SENT', label: 'Envoyées', color: '#4d73e8' },
+      { status: 'REVIEWED', label: 'Consultées', color: '#37a2da' },
+      { status: 'INTERVIEW', label: 'Entretiens', color: '#8b62dc' },
+      { status: 'ACCEPTED', label: 'Acceptées', color: '#28a77b' },
+      { status: 'REJECTED', label: 'Refusées', color: '#e26767' },
+      { status: 'WITHDRAWN', label: 'Retirées', color: '#a5adba' },
+    ];
+    return definitions.map(item => ({ ...item, count: this.adminApplications().filter(application => application.status === item.status).length }));
+  });
+  readonly activeOfferCount = computed(() => this.adminOffers().filter(offer => offer.active).length);
+  readonly archivedOfferCount = computed(() => this.adminOffers().filter(offer => !offer.active).length);
+
+  applicationChartGradient(): string {
+    const data = this.applicationChartData();
+    const total = Math.max(1, data.reduce((sum, item) => sum + item.count, 0));
+    let cursor = 0;
+    const stops = data.filter(item => item.count > 0).map(item => {
+      const start = cursor;
+      cursor += (item.count / total) * 100;
+      return `${item.color} ${start}% ${cursor}%`;
+    });
+    return stops.length ? `conic-gradient(${stops.join(',')})` : 'conic-gradient(#e7ebf3 0 100%)';
+  }
+
+  metricBarHeight(value: number): number {
+    const stats = this.adminStats();
+    const values = [stats?.users ?? 0, stats?.jobOffers ?? 0, stats?.applications ?? 0, stats?.analyses ?? 0];
+    const maximum = Math.max(1, ...values);
+    return Math.max(12, Math.round((value / maximum) * 100));
+  }
 
   async submitAuth(): Promise<void> {
     if (this.authLoading()) return;
@@ -108,6 +188,8 @@ export class AppComponent {
       localStorage.setItem('careerlens_user', JSON.stringify(payload.user));
       this.token.set(payload.token);
       this.user.set(payload.user);
+      this.publicView.set('landing');
+      this.marketingPreview.set(false);
       this.password = '';
     } catch (authError) {
       this.authError.set(authError instanceof Error ? authError.message : 'Authentication failed');
@@ -121,13 +203,54 @@ export class AppComponent {
     this.authError.set('');
   }
 
+  openAuth(mode: 'login' | 'register'): void {
+    this.authMode.set(mode);
+    this.authError.set('');
+    this.publicView.set('auth');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  showLanding(): void {
+    this.publicView.set('landing');
+    this.marketingPreview.set(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  openMarketing(): void {
+    this.publicView.set('landing');
+    this.marketingPreview.set(true);
+    this.closeMobileSidebar();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  returnToApplication(): void {
+    this.marketingPreview.set(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  openFromLanding(view: 'analyzer' | 'jobs' | 'applications' | 'history' | 'profile' | 'admin'): void {
+    if (!this.user()) { this.openAuth('login'); return; }
+    this.returnToApplication();
+    window.setTimeout(() => {
+      if (view === 'analyzer') this.showAnalyzer();
+      else if (view === 'jobs') void this.openJobs();
+      else if (view === 'applications') void this.openApplications();
+      else if (view === 'history') void this.openHistory();
+      else if (view === 'profile') void this.openProfile();
+      else if (view === 'admin' && this.user()?.role === 'ADMIN') void this.openAdmin();
+    }, 0);
+  }
+
   logout(): void {
+    this.stopApplicationsRefresh();
     localStorage.removeItem('careerlens_token');
     localStorage.removeItem('careerlens_user');
     this.token.set('');
     this.user.set(null);
     this.result.set(null);
     this.currentView.set('analyzer');
+    this.publicView.set('landing');
+    this.marketingPreview.set(false);
   }
 
   async analyze(): Promise<void> {
@@ -141,7 +264,7 @@ export class AppComponent {
       const response = await this.authorizedFetch(`${this.apiUrl}/analyses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cv_text: this.cvText, job_description: this.jobDescription }),
+        body: JSON.stringify({ cv_text: this.cvText, job_description: this.jobDescription, job_offer_id: this.selectedOffer()?.id ?? null }),
         signal: controller.signal,
       });
       if (!response.ok) throw new Error(await this.responseError(response, 'The AI service could not complete this analysis.'));
@@ -158,11 +281,11 @@ export class AppComponent {
     }
   }
 
-  async uploadDocument(event: Event, target: 'cv' | 'job'): Promise<void> {
+  async uploadDocument(event: Event, target: 'cv' | 'job' | 'profile'): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
-    const uploading = target === 'cv' ? this.uploadingCv : this.uploadingJob;
+    const uploading = target === 'job' ? this.uploadingJob : this.uploadingCv;
     uploading.set(true);
     this.error.set('');
     try {
@@ -171,7 +294,10 @@ export class AppComponent {
       const response = await this.authorizedFetch(`${this.apiUrl}/documents/extract`, { method: 'POST', body: formData });
       if (!response.ok) throw new Error(await this.responseError(response, 'The document could not be imported.'));
       const payload = await response.json() as { text: string; filename: string };
-      if (target === 'cv') {
+      if (target === 'profile') {
+        this.profileCv = payload.text;
+        this.cvFilename.set(payload.filename);
+      } else if (target === 'cv') {
         this.cvText = payload.text;
         this.cvFilename.set(payload.filename);
       } else {
@@ -188,19 +314,22 @@ export class AppComponent {
 
   async openAdmin(): Promise<void> {
     this.currentView.set('admin');
+    this.adminSection.set('overview');
     this.adminLoading.set(true);
     this.error.set('');
     try {
-      const [statsResponse, usersResponse, offersResponse, interviewsResponse] = await Promise.all([
+      const [statsResponse, usersResponse, offersResponse, applicationsResponse, interviewsResponse] = await Promise.all([
         this.authorizedFetch(`${this.apiUrl}/admin/stats`),
         this.authorizedFetch(`${this.apiUrl}/admin/users`),
         this.authorizedFetch(`${this.apiUrl}/admin/job-offers`),
+        this.authorizedFetch(`${this.apiUrl}/admin/applications`),
         this.authorizedFetch(`${this.apiUrl}/admin/interviews`),
       ]);
-      if (!statsResponse.ok || !usersResponse.ok || !offersResponse.ok || !interviewsResponse.ok) throw new Error('Unable to load the admin dashboard.');
+      if (!statsResponse.ok || !usersResponse.ok || !offersResponse.ok || !applicationsResponse.ok || !interviewsResponse.ok) throw new Error('Unable to load the admin dashboard.');
       this.adminStats.set(await statsResponse.json() as AdminStats);
       this.adminUsers.set(await usersResponse.json() as AuthUser[]);
       this.adminOffers.set(await offersResponse.json() as JobOffer[]);
+      this.adminApplications.set(await applicationsResponse.json() as ApplicationItem[]);
       this.adminInterviews.set(await interviewsResponse.json() as AdminInterviewResult[]);
     } catch (adminError) {
       this.error.set(adminError instanceof Error ? adminError.message : 'Admin dashboard failed to load.');
@@ -214,7 +343,264 @@ export class AppComponent {
     this.selectedOffer.set(null);
     this.result.set(null);
     this.error.set('');
-    await this.loadJobOffers();
+    await Promise.all([this.loadJobOffers(), this.loadFavorites()]);
+    if (!this.profile()) {
+      const profileResponse = await this.authorizedFetch(`${this.apiUrl}/profile`);
+      if (profileResponse.ok) this.profile.set(await profileResponse.json() as CandidateProfile);
+    }
+  }
+
+  filteredJobOffers(): JobOffer[] {
+    const query = this.jobSearch.trim().toLowerCase();
+    return this.jobOffers().filter(offer => {
+      const text = `${offer.title} ${offer.company} ${offer.location} ${offer.description}`.toLowerCase();
+      return (!query || text.includes(query))
+        && (!this.jobType || offer.employmentType === this.jobType)
+        && (!this.favoritesOnly() || this.isFavorite(offer.id));
+    });
+  }
+
+  async loadFavorites(): Promise<void> {
+    const response = await this.authorizedFetch(`${this.apiUrl}/favorites`);
+    if (response.ok) this.favoriteOfferIds.set(await response.json() as number[]);
+  }
+
+  isFavorite(offerId: number): boolean { return this.favoriteOfferIds().includes(offerId); }
+
+  async toggleFavorite(offer: JobOffer, event?: Event): Promise<void> {
+    event?.stopPropagation();
+    this.error.set('');
+    const response = await this.authorizedFetch(`${this.apiUrl}/favorites/${offer.id}`, { method: 'POST' });
+    if (!response.ok) { this.error.set(await this.responseError(response, 'Unable to update favorites.')); return; }
+    const payload = await response.json() as { favorite: boolean; jobOfferId: number };
+    this.favoriteOfferIds.update(ids => payload.favorite
+      ? Array.from(new Set([...ids, payload.jobOfferId]))
+      : ids.filter(id => id !== payload.jobOfferId));
+  }
+
+  async openProfile(): Promise<void> {
+    this.currentView.set('profile');
+    this.profileLoading.set(true);
+    this.error.set('');
+    try {
+      const response = await this.authorizedFetch(`${this.apiUrl}/profile`);
+      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to load your profile.'));
+      const profile = await response.json() as CandidateProfile;
+      this.profile.set(profile);
+      this.profileFullName = profile.fullName;
+      this.profileHeadline = profile.headline;
+      this.profileCv = profile.savedCvText;
+      this.profileSkills = profile.skills;
+      this.profilePreferences = profile.preferences;
+    } catch (profileError) {
+      this.error.set(profileError instanceof Error ? profileError.message : 'Unable to load your profile.');
+    } finally { this.profileLoading.set(false); }
+  }
+
+  async saveProfile(): Promise<void> {
+    this.profileSaving.set(true);
+    this.profileMessage.set('');
+    try {
+      const response = await this.authorizedFetch(`${this.apiUrl}/profile`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+          fullName: this.profileFullName, headline: this.profileHeadline, savedCvText: this.profileCv,
+          skills: this.profileSkills, preferences: this.profilePreferences,
+        }),
+      });
+      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to save your profile.'));
+      const profile = await response.json() as CandidateProfile;
+      this.profile.set(profile);
+      const current = this.user();
+      if (current) {
+        const updated = { ...current, fullName: profile.fullName };
+        this.user.set(updated); localStorage.setItem('careerlens_user', JSON.stringify(updated));
+      }
+      this.profileMessage.set('Profile and CV saved successfully.');
+    } catch (saveError) {
+      this.error.set(saveError instanceof Error ? saveError.message : 'Unable to save your profile.');
+    } finally { this.profileSaving.set(false); }
+  }
+
+  useSavedCv(): void {
+    const saved = this.profile()?.savedCvText || this.profileCv;
+    if (!saved) { this.error.set('Save a CV in your profile first.'); return; }
+    this.cvText = saved;
+    this.cvFilename.set('Saved profile CV');
+  }
+
+  async openHistory(): Promise<void> {
+    this.currentView.set('history');
+    this.historyLoading.set(true);
+    this.error.set('');
+    try {
+      const response = await this.authorizedFetch(`${this.apiUrl}/history`);
+      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to load your history.'));
+      this.history.set(await response.json() as HistoryItem[]);
+    } catch (historyError) {
+      this.error.set(historyError instanceof Error ? historyError.message : 'Unable to load your history.');
+    } finally { this.historyLoading.set(false); }
+  }
+
+  async openApplications(): Promise<void> {
+    this.currentView.set('applications');
+    await this.loadApplications(true);
+    this.startApplicationsRefresh();
+  }
+
+  async refreshApplications(): Promise<void> {
+    await this.loadApplications(false);
+  }
+
+  private async loadApplications(showLoader: boolean): Promise<void> {
+    if (showLoader) this.applicationsLoading.set(true);
+    else this.applicationsRefreshing.set(true);
+    this.error.set('');
+    try {
+      const response = await this.authorizedFetch(`${this.apiUrl}/applications`);
+      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to load applications.'));
+      this.applications.set(await response.json() as ApplicationItem[]);
+      this.applicationsLastRefresh.set(new Date());
+    } catch (applicationError) {
+      this.error.set(applicationError instanceof Error ? applicationError.message : 'Unable to load applications.');
+    } finally {
+      this.applicationsLoading.set(false);
+      this.applicationsRefreshing.set(false);
+    }
+  }
+
+  private startApplicationsRefresh(): void {
+    if (this.applicationsRefreshTimer !== null) return;
+    this.applicationsRefreshTimer = window.setInterval(() => {
+      if (this.currentView() === 'applications' && this.token()) void this.loadApplications(false);
+    }, 5000);
+  }
+
+  private stopApplicationsRefresh(): void {
+    if (this.applicationsRefreshTimer === null) return;
+    window.clearInterval(this.applicationsRefreshTimer);
+    this.applicationsRefreshTimer = null;
+  }
+
+  async applyToSelectedOffer(): Promise<void> {
+    const offer = this.selectedOffer();
+    if (!offer || this.applicationSaving()) return;
+    this.applicationSaving.set(true); this.applicationMessage.set(''); this.error.set('');
+    try {
+      const response = await this.authorizedFetch(`${this.apiUrl}/applications`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobOfferId: offer.id, coverLetter: this.coverLetter }) });
+      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to submit application.'));
+      this.applicationMessage.set('Application submitted successfully.');
+    } catch (applyError) { this.error.set(applyError instanceof Error ? applyError.message : 'Unable to submit application.'); }
+    finally { this.applicationSaving.set(false); }
+  }
+
+  async withdrawApplication(application: ApplicationItem): Promise<void> {
+    if (!window.confirm(`Withdraw your application for “${application.jobTitle}”?`)) return;
+    const response = await this.authorizedFetch(`${this.apiUrl}/applications/${application.id}`, { method: 'DELETE' });
+    if (!response.ok) { this.error.set(await this.responseError(response, 'Unable to withdraw application.')); return; }
+    await this.openApplications();
+  }
+
+  async updateApplicationStatus(application: ApplicationItem, status: string): Promise<void> {
+    this.adminApplicationMessage.set('');
+    this.error.set('');
+    this.applicationStatusUpdatingId.set(application.id);
+    try {
+      const response = await this.authorizedFetch(`${this.apiUrl}/admin/applications/${application.id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+      if (!response.ok) throw new Error(await this.responseError(response, 'Impossible de modifier le statut.'));
+      const updated = await response.json() as ApplicationItem;
+      this.adminApplications.update(items => items.map(item => item.id === updated.id ? updated : item));
+      this.adminApplicationMessage.set(`Le statut de ${updated.candidateName} est maintenant « ${this.applicationStatusLabel(updated.status)} ».`);
+    } catch (statusError) {
+      this.error.set(statusError instanceof Error ? statusError.message : 'Impossible de modifier le statut.');
+    } finally {
+      this.applicationStatusUpdatingId.set(null);
+    }
+  }
+
+  applicationStatusLabel(status: string): string {
+    return ({ SENT: 'Envoyée', REVIEWED: 'Consultée', INTERVIEW: 'Entretien', ACCEPTED: 'Acceptée', REJECTED: 'Refusée', WITHDRAWN: 'Retirée' } as Record<string, string>)[status] ?? status;
+  }
+
+  applicationStatusMessage(status: string): string {
+    return ({
+      SENT: 'Votre candidature a bien été transmise à l’entreprise.',
+      REVIEWED: 'Votre candidature a été consultée par le recruteur.',
+      INTERVIEW: 'Bonne nouvelle : vous avez été sélectionné(e) pour un entretien.',
+      ACCEPTED: 'Félicitations ! Votre candidature a été acceptée.',
+      REJECTED: 'Votre candidature n’a malheureusement pas été retenue.',
+      WITHDRAWN: 'Vous avez retiré cette candidature.',
+    } as Record<string, string>)[status] ?? 'Le statut de votre candidature a été mis à jour.';
+  }
+
+  applicationStatusIcon(status: string): string {
+    return ({ SENT: '↗', REVIEWED: '◉', INTERVIEW: '◷', ACCEPTED: '✓', REJECTED: '×', WITHDRAWN: '−' } as Record<string, string>)[status] ?? '•';
+  }
+
+  selectAdminSection(section: 'overview' | 'applications' | 'offers' | 'users'): void {
+    this.adminSection.set(section);
+  }
+
+  toggleSidebar(): void { this.sidebarCollapsed.update(value => !value); }
+  closeMobileSidebar(): void { this.mobileSidebarOpen.set(false); }
+
+  currentViewLabel(): string {
+    return ({ analyzer: 'Matching IA', jobs: 'Offres d’emploi', applications: 'Mes candidatures', history: 'Historique', profile: 'Mon profil', admin: 'Administration' } as const)[this.currentView()];
+  }
+
+  private animateCurrentView(): void {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const root = this.host.nativeElement as HTMLElement;
+    const targets = Array.from(root.querySelectorAll<HTMLElement>(
+      '.landing-hero-copy > *, .landing-visual, .landing-logo-strip > *, .landing-section-heading, .landing-steps > *, .landing-bento > *, .landing-cta > *, .auth-brand, .auth-message > *, .auth-proof, .auth-card > *, main > section:not(.processing) > .jobs-heading, main > section:not(.processing) > .section-heading, .hero > *, .analysis-form > *, .job-filters, .job-grid > *, .offer-detail, .job-match-card, .application-grid > *, .history-list > *, .profile-layout > *, .admin-main > .admin-hero, .admin-main .stat-grid > *, .dashboard-charts > *, .admin-overview-actions > *, .admin-applications, .admin-offers-section, .admin-main > .users-card'
+    )).filter(element => element.offsetParent !== null);
+    if (!targets.length) return;
+    animate(targets, { opacity: [0, 1], y: [18, 0], scale: [.985, 1] }, {
+      duration: .5,
+      delay: stagger(.035),
+      ease: [.16, 1, .3, 1],
+    });
+    const floatingPieces = root.querySelectorAll<HTMLElement>('.landing-float-piece');
+    if (floatingPieces.length) animate(floatingPieces, {
+      y: [-8, 12, -8],
+      rotate: [-5, 7, -5],
+    }, { duration: 5.5, delay: stagger(.35), repeat: Infinity, ease: 'easeInOut' });
+    const orbitRings = root.querySelectorAll<HTMLElement>('.landing-orbit-ring');
+    if (orbitRings.length) animate(orbitRings, { rotate: [0, 360] }, {
+      duration: 24,
+      delay: stagger(1.5),
+      repeat: Infinity,
+      ease: 'linear',
+    });
+    const authPieces = root.querySelectorAll<HTMLElement>('.auth-float-piece');
+    if (authPieces.length) animate(authPieces, {
+      y: [-7, 11, -7],
+      rotate: [-4, 5, -4],
+    }, { duration: 5, delay: stagger(.45), repeat: Infinity, ease: 'easeInOut' });
+    const authOrbits = root.querySelectorAll<HTMLElement>('.auth-orbit');
+    if (authOrbits.length) animate(authOrbits, { rotate: [0, 360] }, {
+      duration: 28,
+      delay: stagger(2),
+      repeat: Infinity,
+      ease: 'linear',
+    });
+    const workspacePieces = Array.from(root.querySelectorAll<HTMLElement>('.workspace-float-piece')).filter(element => {
+      if (this.continuousMotionElements.has(element)) return false;
+      this.continuousMotionElements.add(element); return true;
+    });
+    if (workspacePieces.length) animate(workspacePieces, {
+      y: [-6, 10, -6],
+      rotate: [-3, 5, -3],
+    }, { duration: 6, delay: stagger(.55), repeat: Infinity, ease: 'easeInOut' });
+    const workspaceOrbits = Array.from(root.querySelectorAll<HTMLElement>('.workspace-orbit')).filter(element => {
+      if (this.continuousMotionElements.has(element)) return false;
+      this.continuousMotionElements.add(element); return true;
+    });
+    if (workspaceOrbits.length) animate(workspaceOrbits, { rotate: [0, 360] }, {
+      duration: 32,
+      delay: stagger(2.5),
+      repeat: Infinity,
+      ease: 'linear',
+    });
   }
 
   async openInterviews(): Promise<void> {
@@ -307,6 +693,8 @@ export class AppComponent {
     this.jobDescription = offer.description;
     this.result.set(null);
     this.error.set('');
+    this.applicationMessage.set('');
+    this.coverLetter = '';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -384,6 +772,19 @@ export class AppComponent {
     }
   }
 
+  async toggleOfferActive(offer: JobOffer): Promise<void> {
+    this.offerError.set('');
+    try {
+      const response = await this.authorizedFetch(`${this.apiUrl}/admin/job-offers/${offer.id}/active`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: !offer.active }),
+      });
+      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to change publication status.'));
+      await this.refreshAdminOffers();
+    } catch (statusError) {
+      this.offerError.set(statusError instanceof Error ? statusError.message : 'Unable to change publication status.');
+    }
+  }
+
   private async refreshAdminOffers(): Promise<void> {
     const [offersResponse, statsResponse] = await Promise.all([
       this.authorizedFetch(`${this.apiUrl}/admin/job-offers`),
@@ -392,10 +793,10 @@ export class AppComponent {
     if (!offersResponse.ok || !statsResponse.ok) throw new Error('Unable to refresh job offers.');
     this.adminOffers.set(await offersResponse.json() as JobOffer[]);
     this.adminStats.set(await statsResponse.json() as AdminStats);
-    this.jobOffers.set(this.adminOffers());
+    this.jobOffers.set(this.adminOffers().filter(offer => offer.active));
   }
 
-  showAnalyzer(): void { this.currentView.set('analyzer'); }
+  showAnalyzer(): void { this.currentView.set('analyzer'); this.closeMobileSidebar(); }
   get apiUrl(): string { return '/api'; }
   score(value: number | undefined): number { return Math.round((value ?? 0) * 100); }
   compatibilityScore(): number { return Math.round((this.result()?.compatibility_score ?? 0) * 1000) / 10; }

@@ -33,6 +33,18 @@ public class UserAccount {
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
+    @Column(length = 160)
+    private String headline = "";
+
+    @Column(columnDefinition = "TEXT")
+    private String savedCvText = "";
+
+    @Column(columnDefinition = "TEXT")
+    private String skills = "";
+
+    @Column(columnDefinition = "TEXT")
+    private String preferences = "";
+
     protected UserAccount() {}
 
     public UserAccount(String fullName, String email, String passwordHash, Role role) {
@@ -48,4 +60,16 @@ public class UserAccount {
     public String getPasswordHash() { return passwordHash; }
     public Role getRole() { return role; }
     public Instant getCreatedAt() { return createdAt; }
+    public String getHeadline() { return headline == null ? "" : headline; }
+    public String getSavedCvText() { return savedCvText == null ? "" : savedCvText; }
+    public String getSkills() { return skills == null ? "" : skills; }
+    public String getPreferences() { return preferences == null ? "" : preferences; }
+
+    public void updateProfile(String fullName, String headline, String savedCvText, String skills, String preferences) {
+        this.fullName = fullName.trim();
+        this.headline = headline == null ? "" : headline.trim();
+        this.savedCvText = savedCvText == null ? "" : savedCvText.trim();
+        this.skills = skills == null ? "" : skills.trim();
+        this.preferences = preferences == null ? "" : preferences.trim();
+    }
 }

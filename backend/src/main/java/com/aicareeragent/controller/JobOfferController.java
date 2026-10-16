@@ -19,12 +19,12 @@ public class JobOfferController {
 
     @GetMapping
     public List<JobOfferResponse> list() {
-        return offers.findAllByOrderByCreatedAtDesc().stream().map(JobOfferResponse::from).toList();
+        return offers.findByActiveTrueOrderByCreatedAtDesc().stream().map(JobOfferResponse::from).toList();
     }
 
     @GetMapping("/{id}")
     public JobOfferResponse get(@PathVariable Long id) {
-        return offers.findById(id).map(JobOfferResponse::from)
+        return offers.findById(id).filter(com.aicareeragent.model.JobOffer::isActive).map(JobOfferResponse::from)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Job offer not found"));
     }
 }

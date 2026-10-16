@@ -1,6 +1,48 @@
-<section *ngIf="!user()" class="auth-page">
+<ng-template #unifiedNavbar>
+  <nav class="unified-navbar" aria-label="Navigation CareerLens">
+    <button type="button" class="brand unified-brand" (click)="openMarketing()"><span class="brand-mark">↗</span><span>Career<span>Lens</span></span></button>
+    <div class="unified-links">
+      <button type="button" [class.active]="marketingPreview() || !user()" (click)="openMarketing()">Accueil</button>
+      <button type="button" [class.active]="user() && !marketingPreview() && currentView() === 'analyzer'" (click)="openFromLanding('analyzer')">Matching IA</button>
+      <button type="button" [class.active]="user() && !marketingPreview() && currentView() === 'jobs'" (click)="openFromLanding('jobs')">Offres</button>
+      <button type="button" [class.active]="user() && !marketingPreview() && currentView() === 'applications'" (click)="openFromLanding('applications')">Candidatures</button>
+      <button type="button" [class.active]="user() && !marketingPreview() && currentView() === 'history'" (click)="openFromLanding('history')">Historique</button>
+      <button type="button" [class.active]="user() && !marketingPreview() && currentView() === 'profile'" (click)="openFromLanding('profile')">Profil</button>
+      <button *ngIf="!user() || user()?.role === 'ADMIN'" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'admin'" (click)="openFromLanding('admin')">Admin</button>
+    </div>
+    <div class="unified-actions"><ng-container *ngIf="user() as navUser; else publicNavActions"><div class="unified-user"><span>{{ navUser.fullName.charAt(0).toUpperCase() }}</span><div><b>{{ navUser.fullName }}</b><small>{{ navUser.role === 'ADMIN' ? 'Administrateur' : 'Candidat' }}</small></div></div><button type="button" class="unified-logout" (click)="logout()"><span>Déconnexion</span><i>↗</i></button></ng-container><ng-template #publicNavActions><button type="button" class="landing-signin" (click)="openAuth('login')">Se connecter</button><button type="button" class="landing-start" (click)="openAuth('register')">Commencer <span>→</span></button></ng-template></div>
+  </nav>
+</ng-template>
+
+<div *ngIf="(!user() || marketingPreview()) && publicView() === 'landing'" class="landing-page">
+  <ng-container *ngTemplateOutlet="unifiedNavbar"></ng-container>
+
+  <main class="landing-main">
+    <section id="accueil" class="landing-hero">
+      <app-three-scene class="landing-three" theme="dark" variant="landing" [density]="240"></app-three-scene>
+      <div class="landing-glow glow-one"></div><div class="landing-glow glow-two"></div><div class="landing-orbit-ring orbit-ring-one"><i></i></div><div class="landing-orbit-ring orbit-ring-two"><i></i></div><span class="landing-float-piece float-piece-one">AI</span><span class="landing-float-piece float-piece-two">✦</span><span class="landing-float-piece float-piece-three">92%</span><span class="landing-float-piece float-piece-four">CV</span>
+      <div class="landing-hero-copy"><p class="landing-badge"><i></i> AI-POWERED · SMART MATCHING · REAL OPPORTUNITIES</p><h1>Trouvez les bonnes opportunités.<br><em>Plus rapidement.</em></h1><p>CareerLens comprend vos compétences, analyse les offres et transforme chaque candidature en une décision plus claire et mieux préparée.</p><div class="landing-hero-actions"><button type="button" class="landing-primary" (click)="openAuth('register')">Commencer gratuitement <span>→</span></button><a href="#fonctionnement" class="landing-secondary"><i>▶</i> Découvrir le produit</a></div><div class="landing-proof"><div><span>A</span><span>S</span><span>M</span><span>+</span></div><p><b>10 000+ candidats accompagnés</b><small>Des décisions carrière alimentées par une IA transparente.</small></p></div></div>
+      <div class="landing-visual" aria-label="Aperçu du matching CareerLens"><div class="visual-grid"></div><article class="candidate-preview"><div class="preview-head"><span>AM</span><div><b>Ahmed Mansour</b><small>Full-stack Developer</small></div><i>CV</i></div><div class="preview-skills"><span>Angular</span><span>Spring Boot</span><span>TypeScript</span></div><div class="preview-line"><i></i></div><div class="preview-line short"><i></i></div></article><article class="ai-core"><span>AI</span><b>Analyse en cours</b><div><i></i><i></i><i></i></div></article><article class="match-preview"><p>COMPATIBILITÉ</p><strong>92<small>%</small></strong><div class="landing-score-bar"><i></i></div><span>Excellent match</span></article><svg class="visual-connections" viewBox="0 0 620 430" preserveAspectRatio="none"><path d="M185 115 C280 115 250 215 326 215"/><path d="M398 215 C465 215 435 320 510 320"/></svg></div>
+    </section>
+
+    <section class="landing-trusted"><p>ILS FONT CONFIANCE À UNE MEILLEURE INTELLIGENCE CARRIÈRE</p><div class="landing-logo-strip"><span>Esprit</span><span>VERMEG</span><span>Ooredoo</span><span>Orange</span><span>Telnet</span><span>Sofrecom</span></div></section>
+
+    <section id="fonctionnement" class="landing-section how-section"><div class="landing-section-heading"><p>COMMENT ÇA MARCHE</p><h2>Trois étapes vers une candidature plus forte.</h2><span>Une expérience simple, de votre CV jusqu’à une analyse exploitable.</span></div><div class="landing-steps"><article><i>01</i><div class="step-icon">↑</div><h3>Importez votre CV</h3><p>Enregistrez votre profil une seule fois et réutilisez-le pour toutes les opportunités.</p></article><article><i>02</i><div class="step-icon violet">⌕</div><h3>Découvrez les offres</h3><p>Parcourez, filtrez et sauvegardez les opportunités adaptées à votre projet.</p></article><article><i>03</i><div class="step-icon cyan">✦</div><h3>Obtenez votre AI Match</h3><p>Comprenez le score, les compétences alignées et les axes d’amélioration.</p></article></div></section>
+
+    <section id="fonctionnalites" class="landing-section features-section"><div class="landing-section-heading light"><p>CAREER INTELLIGENCE</p><h2>Tout ce qu’il faut pour candidater avec confiance.</h2><span>Un produit cohérent pour analyser, progresser et suivre chaque opportunité.</span></div><div class="landing-bento"><article class="bento-large"><div class="bento-icon">AI</div><h3>Analyse CV intelligente</h3><p>Extraction des compétences, expériences et recommandations personnalisées.</p><div class="bento-metrics"><span><b>92%</b><small>Compétences</small></span><span><b>86%</b><small>Expérience</small></span><span><b>90%</b><small>Formation</small></span></div></article><article><div class="bento-icon blue">↗</div><h3>Smart Matching</h3><p>Comparez votre profil à chaque offre avec un score explicable.</p></article><article><div class="bento-icon green">✓</div><h3>Suivi des candidatures</h3><p>Visualisez instantanément chaque changement de statut.</p></article><article><div class="bento-icon violet">◎</div><h3>Skill Gap Detection</h3><p>Identifiez les compétences manquantes et les priorités d’apprentissage.</p></article><article class="bento-wide"><div><div class="bento-icon cyan">◷</div><h3>Historique et progression</h3><p>Retrouvez vos analyses et observez l’évolution de votre compatibilité.</p></div><div class="mini-chart"><i></i><i></i><i></i><i></i><i></i><i></i></div></article></div></section>
+
+    <section id="entreprises" class="landing-section recruiter-section"><div><p class="landing-eyebrow">POUR LES RECRUTEURS</p><h2>Une lecture plus claire des candidatures.</h2><p>Centralisez les offres, suivez le pipeline et utilisez l’IA comme aide à la décision — jamais comme décision automatique.</p><button type="button" class="landing-primary" (click)="openAuth('login')">Accéder à l’espace recruteur <span>→</span></button></div><div class="pipeline-preview"><div class="pipeline-head"><span>Pipeline candidats</span><b>12 profils</b></div><article><span class="pipeline-avatar">SA</span><div><b>Sarra Amri</b><small>Frontend Developer</small></div><strong>94%</strong></article><article><span class="pipeline-avatar violet">MK</span><div><b>Mohamed Khalil</b><small>Java Engineer</small></div><strong>88%</strong></article><article><span class="pipeline-avatar cyan">YN</span><div><b>Yasmine Nasri</b><small>Data Analyst</small></div><strong>81%</strong></article></div></section>
+
+    <section class="landing-cta"><div><p>PRÊT À COMMENCER ?</p><h2>Votre prochaine opportunité est plus proche que vous ne le pensez.</h2></div><button type="button" class="landing-primary" (click)="openAuth('register')">Commencer avec CareerLens <span>→</span></button></section>
+  </main>
+  <footer class="landing-footer"><a class="brand landing-brand" href="#accueil"><span class="brand-mark">↗</span><span>Career<span>Lens</span></span></a><p>Career intelligence, powered by transparent AI.</p><span>© 2026 CareerLens</span></footer>
+</div>
+
+<section *ngIf="!user() && publicView() === 'auth'" class="auth-page">
   <div class="auth-visual">
-    <a class="brand auth-brand" href="#"><span class="brand-mark">↗</span><span>Career<span>Lens</span></span></a>
+    <app-three-scene class="auth-three" theme="dark" variant="auth" [density]="170"></app-three-scene>
+    <div class="auth-orbit auth-orbit-one"><i></i></div><div class="auth-orbit auth-orbit-two"><i></i></div><span class="auth-float-piece auth-piece-ai">AI</span><span class="auth-float-piece auth-piece-score">92% Match</span><span class="auth-float-piece auth-piece-spark">✦</span><div class="auth-particles"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <button type="button" class="brand auth-brand auth-back" (click)="showLanding()"><span class="brand-mark">←</span><span>Career<span>Lens</span></span></button>
     <div class="auth-message"><p class="kicker"><span>AI-powered</span> career intelligence</p><h1>Your next role<br>starts with <em>clarity.</em></h1><p>Understand your strengths, uncover skill gaps and make every application more intentional.</p></div>
     <div class="auth-proof"><span>✓</span><p><b>Transparent scoring</b><small>Every result is explainable and actionable.</small></p></div>
   </div>
@@ -20,20 +62,33 @@
   </div>
 </section>
 
-<div *ngIf="user() as currentUser" class="app-shell">
-  <nav class="topbar" aria-label="Main navigation">
-    <a class="brand" href="#top" aria-label="CareerLens home">
-      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
-      <span>Career<span>Lens</span></span>
-    </a>
-    <div class="nav-actions">
-      <button type="button" class="nav-link" [class.active]="currentView() === 'analyzer'" (click)="showAnalyzer()">Analyzer</button>
-      <button type="button" class="nav-link" [class.active]="currentView() === 'jobs'" (click)="openJobs()">Job offers</button>
-      <button *ngIf="currentUser.role !== 'ADMIN'" type="button" class="nav-link" [class.active]="currentView() === 'interviews'" (click)="openInterviews()">Interview practice</button>
-      <button *ngIf="currentUser.role === 'ADMIN'" type="button" class="nav-link" [class.active]="currentView() === 'admin'" (click)="openAdmin()">Admin</button>
-      <div class="user-menu"><span>{{ currentUser.fullName.charAt(0).toUpperCase() }}</span><div><b>{{ currentUser.fullName }}</b><small>{{ currentUser.role }}</small></div><button type="button" title="Sign out" (click)="logout()">↗</button></div>
-    </div>
-  </nav>
+<div *ngIf="user() && !marketingPreview()" class="app-shell" [class.admin-layout]="currentView() === 'admin'">
+  <ng-container *ngIf="user() as currentUser">
+  <button *ngIf="currentView() === 'admin' && mobileSidebarOpen()" type="button" class="sidebar-backdrop" aria-label="Fermer le menu" (click)="closeMobileSidebar()"></button>
+  <aside *ngIf="currentView() === 'admin' && currentUser.role === 'ADMIN'" class="app-sidebar admin-only-sidebar" [class.mobile-open]="mobileSidebarOpen()" aria-label="Navigation administration">
+    <div class="app-sidebar-head"><a class="brand" href="#top" aria-label="CareerLens"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span><span class="sidebar-label">Career<span>Lens</span></span></a></div>
+    <nav>
+      <p class="sidebar-group sidebar-label">ADMINISTRATION</p>
+      <button type="button" [class.active]="adminSection() === 'overview'" (click)="selectAdminSection('overview'); closeMobileSidebar()"><span class="sidebar-icon">⌂</span><span class="sidebar-label"><b>Vue d’ensemble</b><small>Indicateurs de la plateforme</small></span></button>
+      <button type="button" [class.active]="adminSection() === 'applications'" (click)="selectAdminSection('applications'); closeMobileSidebar()"><span class="sidebar-icon">✓</span><span class="sidebar-label"><b>Candidatures</b><small>{{ adminApplications().length }} dossier(s) reçu(s)</small></span></button>
+      <button type="button" [class.active]="adminSection() === 'offers'" (click)="selectAdminSection('offers'); closeMobileSidebar()"><span class="sidebar-icon">▣</span><span class="sidebar-label"><b>Offres d’emploi</b><small>{{ adminOffers().length }} offre(s)</small></span></button>
+      <button type="button" [class.active]="adminSection() === 'users'" (click)="selectAdminSection('users'); closeMobileSidebar()"><span class="sidebar-icon">◎</span><span class="sidebar-label"><b>Utilisateurs</b><small>{{ adminUsers().length }} compte(s)</small></span></button>
+      <p class="sidebar-group sidebar-label">NAVIGATION</p>
+      <button type="button" (click)="showAnalyzer(); closeMobileSidebar()"><span class="sidebar-icon">←</span><span class="sidebar-label"><b>Retour à l’application</b><small>Matching et candidatures</small></span></button>
+    </nav>
+    <div class="app-sidebar-user"><span>{{ currentUser.fullName.charAt(0).toUpperCase() }}</span><div class="sidebar-label"><b>{{ currentUser.fullName }}</b><small>{{ currentUser.email }}</small></div><button type="button" class="sidebar-label" title="Déconnexion" (click)="logout()">↗</button></div>
+  </aside>
+
+  <div class="app-workspace">
+  <ng-container *ngIf="currentView() !== 'admin'; else adminTopbar"><ng-container *ngTemplateOutlet="unifiedNavbar"></ng-container></ng-container><ng-template #adminTopbar><header class="topbar admin-topbar"><div class="topbar-title"><button type="button" class="mobile-menu" (click)="mobileSidebarOpen.set(true)" aria-label="Ouvrir le menu administration">☰</button><div><span>CareerLens Administration</span><b>{{ currentViewLabel() }}</b></div></div><div class="topbar-actions"><span class="service-status"><i></i> Services opérationnels</span><div class="user-menu"><span>{{ currentUser.fullName.charAt(0).toUpperCase() }}</span><div><b>{{ currentUser.fullName }}</b><small>Administrateur</small></div><button type="button" class="navbar-logout" (click)="logout()"><span>Déconnexion</span><i>↗</i></button></div></div></header></ng-template>
+
+  <app-three-scene class="workspace-three" theme="light" [variant]="currentView()" [density]="150"></app-three-scene>
+  <div class="workspace-ambient" aria-hidden="true">
+    <span class="workspace-glow workspace-glow-blue"></span><span class="workspace-glow workspace-glow-violet"></span>
+    <div class="workspace-orbit workspace-orbit-one"><i></i></div><div class="workspace-orbit workspace-orbit-two"><i></i></div><div class="workspace-orbit workspace-orbit-three"><i></i></div>
+    <span class="workspace-float-piece workspace-piece-ai">AI</span><span class="workspace-float-piece workspace-piece-spark">✦</span><span class="workspace-float-piece workspace-piece-score">92%</span><span class="workspace-float-piece workspace-piece-cv">CV</span><span class="workspace-float-piece workspace-piece-code">CODE</span>
+    <div class="workspace-particles"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  </div>
 
   <main id="top">
     <section *ngIf="currentView() === 'analyzer'" class="hero">
@@ -96,14 +151,15 @@
       <div *ngIf="offersLoading()" class="admin-loading"><span class="button-spinner"></span> Loading job offers…</div>
 
       <ng-container *ngIf="!offersLoading() && !selectedOffer()">
-        <div *ngIf="!jobOffers().length" class="empty-jobs"><span>◎</span><h2>No job offers yet</h2><p>The administrator has not published an opportunity yet.</p></div>
-        <div *ngIf="jobOffers().length" class="job-grid">
-          <article *ngFor="let offer of jobOffers()" class="job-card">
-            <div class="job-card-top"><span>{{ offer.company.charAt(0).toUpperCase() }}</span><small>{{ offer.createdAt | date:'mediumDate' }}</small></div>
+        <div class="job-filters"><label><span>⌕</span><input [(ngModel)]="jobSearch" placeholder="Search title, company, technology or location…"></label><select [(ngModel)]="jobType"><option value="">All contract types</option><option>CDI</option><option>CDD</option><option>Internship</option><option>Freelance</option><option>Part-time</option><option>Full-time</option></select><button type="button" class="favorites-filter" [class.active]="favoritesOnly()" (click)="favoritesOnly.set(!favoritesOnly())">★ Favorites</button><span>{{ filteredJobOffers().length }} results</span></div>
+        <div *ngIf="!filteredJobOffers().length" class="empty-jobs"><span>◎</span><h2>No matching offers</h2><p>Try changing your search or contract filter.</p></div>
+        <div *ngIf="filteredJobOffers().length" class="job-grid">
+          <article *ngFor="let offer of filteredJobOffers()" class="job-card">
+            <div class="job-card-top"><span>{{ offer.company.charAt(0).toUpperCase() }}</span><div><small>{{ offer.createdAt | date:'mediumDate' }}</small><button type="button" class="favorite-button" [class.active]="isFavorite(offer.id)" (click)="toggleFavorite(offer, $event)" [attr.aria-label]="isFavorite(offer.id) ? 'Remove from favorites' : 'Add to favorites'">{{ isFavorite(offer.id) ? '★' : '☆' }}</button></div></div>
             <h2>{{ offer.title }}</h2><p class="job-company">{{ offer.company }}</p>
             <div class="job-meta"><span>⌖ {{ offer.location }}</span><span>{{ offer.employmentType }}</span></div>
             <p class="job-excerpt">{{ offer.description }}</p>
-            <button type="button" (click)="selectOffer(offer)">View offer & match CV <span>→</span></button>
+            <button type="button" class="view-offer-button" (click)="selectOffer(offer)">View offer & match CV <span>→</span></button>
           </article>
         </div>
       </ng-container>
@@ -118,9 +174,11 @@
         <form class="job-match-card" (ngSubmit)="matchSelectedOffer()">
           <span class="match-icon">AI</span><p class="section-number">INSTANT MATCH</p><h2>Compare your CV</h2><p>Upload your CV and our AI will measure its compatibility with this specific role.</p>
           <input #matchCv hidden type="file" accept=".pdf,.docx,.txt" (change)="uploadDocument($event, 'cv')">
+          <button *ngIf="profile()?.savedCvText" class="saved-cv-button" type="button" (click)="useSavedCv()">Use my saved profile CV</button>
           <button class="match-upload" type="button" (click)="matchCv.click()" [disabled]="uploadingCv()"><span>{{ uploadingCv() ? '…' : '↑' }}</span><div><b>{{ uploadingCv() ? 'Extracting your CV…' : 'Upload your CV' }}</b><small>{{ cvFilename() || 'PDF, DOCX or TXT · max 10 MB' }}</small></div></button>
           <textarea required [(ngModel)]="cvText" name="offerCvText" placeholder="Your extracted CV text will appear here…"></textarea>
           <button class="match-submit" type="submit" [disabled]="loading() || !cvText.trim()"><span *ngIf="loading()" class="button-spinner"></span>{{ loading() ? 'Calculating match…' : 'See my matching result' }}</button>
+          <div class="application-box"><p class="section-number">READY TO APPLY?</p><textarea [(ngModel)]="coverLetter" name="coverLetter" maxlength="10000" placeholder="Optional short cover letter…"></textarea><p *ngIf="applicationMessage()" class="profile-success">✓ {{ applicationMessage() }}</p><button type="button" class="application-submit" (click)="applyToSelectedOffer()" [disabled]="applicationSaving()"><span *ngIf="applicationSaving()" class="button-spinner"></span>{{ applicationSaving() ? 'Submitting…' : 'Apply with my saved CV' }}</button><small>Your saved profile CV is attached to this application.</small></div>
         </form>
       </div>
     </section>
@@ -149,6 +207,31 @@
     </section>
 
     <div *ngIf="error()" class="error-message" role="alert"><span>!</span><div><b>We couldn't complete the analysis</b><p>{{ error() }}</p></div></div>
+    <section *ngIf="currentView() === 'applications'" class="applications-page">
+      <div class="jobs-heading"><div><p class="section-number">MES CANDIDATURES</p><h1>Suivez vos candidatures</h1><p>Les changements effectués par l’administrateur apparaissent automatiquement sur cette page.</p></div><div class="applications-heading-actions"><span class="admin-badge">{{ applications().length }} candidature(s)</span><button type="button" class="secondary-button" (click)="refreshApplications()" [disabled]="applicationsRefreshing()"><span [class.button-spinner]="applicationsRefreshing()">{{ applicationsRefreshing() ? '' : '↻' }}</span> Actualiser</button></div></div>
+      <div *ngIf="applicationsLoading()" class="admin-loading"><span class="button-spinner"></span> Loading applications…</div>
+      <div *ngIf="!applicationsLoading() && !applications().length" class="empty-jobs"><span>✦</span><h2>No applications yet</h2><p>Open a job offer and apply using your saved CV.</p></div>
+      <p *ngIf="applicationsLastRefresh()" class="applications-refresh-note">Mise à jour automatique · dernière vérification à {{ applicationsLastRefresh() | date:'HH:mm:ss' }}</p>
+      <div *ngIf="!applicationsLoading() && applications().length" class="application-grid"><article *ngFor="let application of applications()" [attr.data-status]="application.status"><div class="application-card-top"><span class="application-company">{{ application.company.charAt(0).toUpperCase() }}</span><span class="application-status" [attr.data-status]="application.status">{{ applicationStatusLabel(application.status) }}</span></div><h2>{{ application.jobTitle }}</h2><p>{{ application.company }} · {{ application.location }}</p><div class="candidate-status-message" [attr.data-status]="application.status"><span>{{ applicationStatusIcon(application.status) }}</span><div><b>{{ applicationStatusLabel(application.status) }}</b><p>{{ applicationStatusMessage(application.status) }}</p></div></div><div class="application-timeline"><i></i><span>Envoyée le {{ application.createdAt | date:'mediumDate' }}</span><span>Mise à jour le {{ application.updatedAt | date:'short' }}</span></div><blockquote *ngIf="application.coverLetter">{{ application.coverLetter }}</blockquote><button *ngIf="application.status !== 'WITHDRAWN' && application.status !== 'ACCEPTED' && application.status !== 'REJECTED'" type="button" (click)="withdrawApplication(application)">Retirer la candidature</button></article></div>
+    </section>
+
+    <section *ngIf="currentView() === 'profile'" class="profile-page">
+      <div class="jobs-heading"><div><p class="section-number">CANDIDATE PROFILE</p><h1>Your professional profile</h1><p>Save your CV once and reuse it when matching any published opportunity.</p></div><span class="admin-badge">Private workspace</span></div>
+      <div *ngIf="profileLoading()" class="admin-loading"><span class="button-spinner"></span> Loading profile…</div>
+      <form *ngIf="!profileLoading()" #profileForm="ngForm" class="profile-layout" (ngSubmit)="saveProfile()">
+        <div class="profile-card profile-identity"><div class="profile-avatar">{{ profileFullName.charAt(0).toUpperCase() || 'U' }}</div><label><span>Full name</span><input required maxlength="100" [(ngModel)]="profileFullName" name="profileFullName"></label><label><span>Professional headline</span><input maxlength="160" [(ngModel)]="profileHeadline" name="profileHeadline" placeholder="Full-stack developer · Angular & Spring Boot"></label><label><span>Main skills</span><textarea [(ngModel)]="profileSkills" name="profileSkills" placeholder="Angular, Java, Docker, teamwork…"></textarea></label><label><span>Job preferences</span><textarea [(ngModel)]="profilePreferences" name="profilePreferences" placeholder="Remote, Tunis, CDI, software engineering…"></textarea></label></div>
+        <div class="profile-card profile-cv"><div class="profile-card-title"><div><p class="section-number">PRIMARY CV</p><h2>Reusable resume</h2></div><span>{{ profileCv.length }} characters</span></div><input #profileCvFile hidden type="file" accept=".pdf,.docx,.txt" (change)="uploadDocument($event, 'profile')"><button type="button" class="profile-upload" (click)="profileCvFile.click()" [disabled]="uploadingCv()">{{ uploadingCv() ? 'Extracting…' : '↑ Upload PDF, DOCX or TXT' }}</button><textarea [(ngModel)]="profileCv" name="profileCv" placeholder="Upload your CV or paste its content here…"></textarea><p *ngIf="profileMessage()" class="profile-success">✓ {{ profileMessage() }}</p><button class="profile-save" type="submit" [disabled]="profileForm.invalid || profileSaving()"><span *ngIf="profileSaving()" class="button-spinner"></span>{{ profileSaving() ? 'Saving…' : 'Save my profile' }}</button></div>
+      </form>
+    </section>
+
+    <section *ngIf="currentView() === 'history'" class="history-page">
+      <div class="jobs-heading"><div><p class="section-number">MATCHING HISTORY</p><h1>Your analysis journey</h1><p>Review every compatibility score and follow your progress over time.</p></div><span class="admin-badge">{{ history().length }} analyses</span></div>
+      <div *ngIf="historyLoading()" class="admin-loading"><span class="button-spinner"></span> Loading history…</div>
+      <div *ngIf="!historyLoading() && !history().length" class="empty-jobs"><span>↗</span><h2>No analysis yet</h2><p>Select an offer and match your CV to create your first result.</p></div>
+      <div *ngIf="!historyLoading() && history().length" class="history-list"><article *ngFor="let item of history()"><div class="history-score" [class.strong]="item.compatibilityScore >= .7">{{ score(item.compatibilityScore) }}%</div><div><h2>{{ item.jobTitle }}</h2><p>{{ item.company }}</p><small>{{ item.createdAt | date:'medium' }}</small></div><div class="history-bar"><i [style.width.%]="score(item.compatibilityScore)"></i></div></article></div>
+    </section>
+
+    <div *ngIf="error()" class="error-message" role="alert"><span>!</span><div><b>Une erreur est survenue</b><p>{{ error() }}</p></div></div>
 
     <section *ngIf="visibleResult() as analysisResult" class="report" aria-labelledby="report-title">
       <div class="section-heading report-heading">
@@ -180,18 +263,41 @@
         <article class="insight-card agent-note">
           <div class="card-title"><span>AI</span><div><h3>Agent insight</h3><p>How to read your result</p></div></div>
           <blockquote>{{ analysisResult.ai_explanation?.summary || 'Your report was calculated from the information provided.' }}</blockquote>
+          <ul *ngIf="analysisResult.ai_explanation?.recommendations as recommendations" class="recommendation-list"><li *ngFor="let recommendation of recommendations">{{ recommendation }}</li></ul>
           <p class="note-caption">This score measures compatibility and is not a hiring probability.</p>
         </article>
       </div>
     </section>
 
     <section *ngIf="currentView() === 'admin'" class="admin-dashboard">
-      <div class="admin-hero"><div><p class="section-number">ADMINISTRATION</p><h1>Workspace overview</h1><p>Monitor platform adoption and manage registered accounts.</p></div><span class="admin-badge">Protected area</span></div>
+      <div class="admin-shell">
+      <aside class="admin-sidebar">
+        <div class="admin-sidebar-brand"><span>CL</span><div><b>CareerLens</b><small>Administration</small></div></div>
+        <nav aria-label="Navigation administration">
+          <button type="button" [class.active]="adminSection() === 'overview'" (click)="selectAdminSection('overview')"><span>⌂</span><div><b>Vue d’ensemble</b><small>Statistiques générales</small></div></button>
+          <button type="button" [class.active]="adminSection() === 'applications'" (click)="selectAdminSection('applications')"><span>✓</span><div><b>Candidatures</b><small>{{ adminApplications().length }} reçue(s)</small></div></button>
+          <button type="button" [class.active]="adminSection() === 'offers'" (click)="selectAdminSection('offers')"><span>▣</span><div><b>Offres d’emploi</b><small>{{ adminOffers().length }} offre(s)</small></div></button>
+          <button type="button" [class.active]="adminSection() === 'users'" (click)="selectAdminSection('users')"><span>◎</span><div><b>Utilisateurs</b><small>{{ adminUsers().length }} compte(s)</small></div></button>
+        </nav>
+        <div class="admin-sidebar-user"><span>{{ user()?.fullName?.charAt(0)?.toUpperCase() }}</span><div><b>{{ user()?.fullName }}</b><small>{{ user()?.email }}</small></div></div>
+      </aside>
+      <div class="admin-main">
+      <div class="admin-hero"><div><p class="section-number">ADMINISTRATION</p><h1>{{ adminSection() === 'overview' ? 'Vue d’ensemble' : adminSection() === 'applications' ? 'Candidatures' : adminSection() === 'offers' ? 'Offres d’emploi' : 'Utilisateurs' }}</h1><p>Gérez la plateforme CareerLens depuis votre espace sécurisé.</p></div><span class="admin-badge">Espace protégé</span></div>
       <div *ngIf="adminLoading()" class="admin-loading"><span class="button-spinner"></span> Loading dashboard…</div>
       <ng-container *ngIf="!adminLoading()">
-        <div class="stat-grid"><article><span>Registered users</span><strong>{{ adminStats()?.users || 0 }}</strong><small>Total accounts</small></article><article><span>Job offers</span><strong>{{ adminStats()?.jobOffers || 0 }}</strong><small>Published opportunities</small></article><article><span>AI analyses</span><strong>{{ adminStats()?.analyses || 0 }}</strong><small>Reports generated</small></article><article><span>Service status</span><strong class="online-stat">Online</strong><small>All systems operational</small></article></div>
+        <div *ngIf="adminSection() === 'overview'" class="stat-grid"><article><span>Utilisateurs inscrits</span><strong>{{ adminStats()?.users || 0 }}</strong><small>Comptes au total</small></article><article><span>Offres d’emploi</span><strong>{{ adminStats()?.jobOffers || 0 }}</strong><small>Opportunités créées</small></article><article><span>Candidatures</span><strong>{{ adminStats()?.applications || 0 }}</strong><small>Dossiers envoyés</small></article><article><span>Analyses IA</span><strong>{{ adminStats()?.analyses || 0 }}</strong><small>Rapports générés</small></article></div>
 
-        <div class="admin-offers-section">
+        <div *ngIf="adminSection() === 'overview'" class="dashboard-charts">
+          <article class="chart-card applications-chart"><div class="chart-heading"><div><p class="section-number">RECRUTEMENT</p><h2>Statut des candidatures</h2></div><span>Temps réel</span></div><div class="donut-layout"><div class="donut-chart" [style.background]="applicationChartGradient()"><div><strong>{{ adminApplications().length }}</strong><small>Total</small></div></div><div class="chart-legend"><div *ngFor="let item of applicationChartData()"><i [style.background]="item.color"></i><span>{{ item.label }}</span><b>{{ item.count }}</b></div></div></div></article>
+          <article class="chart-card activity-chart"><div class="chart-heading"><div><p class="section-number">ACTIVITÉ</p><h2>Vue globale</h2></div><span>Données actuelles</span></div><div class="vertical-chart"><div><span class="chart-bar" [style.height.%]="metricBarHeight(adminStats()?.users || 0)"><i>{{ adminStats()?.users || 0 }}</i></span><small>Utilisateurs</small></div><div><span class="chart-bar violet" [style.height.%]="metricBarHeight(adminStats()?.jobOffers || 0)"><i>{{ adminStats()?.jobOffers || 0 }}</i></span><small>Offres</small></div><div><span class="chart-bar green" [style.height.%]="metricBarHeight(adminStats()?.applications || 0)"><i>{{ adminStats()?.applications || 0 }}</i></span><small>Candidatures</small></div><div><span class="chart-bar orange" [style.height.%]="metricBarHeight(adminStats()?.analyses || 0)"><i>{{ adminStats()?.analyses || 0 }}</i></span><small>Analyses IA</small></div></div></article>
+          <article class="chart-card offers-chart"><div class="chart-heading"><div><p class="section-number">PUBLICATION</p><h2>État des offres</h2></div><span>{{ adminOffers().length }} au total</span></div><div class="offer-chart-total"><strong>{{ activeOfferCount() }}</strong><span>offre(s) actuellement visible(s)</span></div><div class="horizontal-metric"><div><span>Publiées</span><b>{{ activeOfferCount() }}</b></div><i><em [style.width.%]="adminOffers().length ? (activeOfferCount() / adminOffers().length) * 100 : 0"></em></i></div><div class="horizontal-metric archived"><div><span>Archivées</span><b>{{ archivedOfferCount() }}</b></div><i><em [style.width.%]="adminOffers().length ? (archivedOfferCount() / adminOffers().length) * 100 : 0"></em></i></div></article>
+        </div>
+
+        <div *ngIf="adminSection() === 'overview'" class="admin-overview-actions"><button type="button" (click)="selectAdminSection('applications')"><span>✓</span><div><b>Gérer les candidatures</b><small>Consulter et modifier leur statut</small></div><i>→</i></button><button type="button" (click)="selectAdminSection('offers')"><span>▣</span><div><b>Gérer les offres</b><small>Créer, publier ou archiver</small></div><i>→</i></button><button type="button" (click)="selectAdminSection('users')"><span>◎</span><div><b>Voir les utilisateurs</b><small>Consulter les comptes inscrits</small></div><i>→</i></button></div>
+
+        <div *ngIf="adminSection() === 'applications'" class="users-card admin-applications"><div class="users-card-head"><div><h2>Candidatures reçues</h2><p>Consultez les candidats et modifiez leur statut de recrutement.</p></div><span>{{ adminApplications().length }} candidature(s)</span></div><p *ngIf="adminApplicationMessage()" class="admin-status-success">✓ {{ adminApplicationMessage() }}</p><div class="table-wrap"><table><thead><tr><th>Candidat</th><th>Offre</th><th>Date</th><th>Statut</th></tr></thead><tbody><tr *ngFor="let application of adminApplications()"><td><span class="table-avatar">{{ application.candidateName.charAt(0).toUpperCase() }}</span><div><b>{{ application.candidateName }}</b><small>{{ application.candidateEmail }}</small></div></td><td><b>{{ application.jobTitle }}</b><small>{{ application.company }}</small></td><td>{{ application.createdAt | date:'mediumDate' }}</td><td><select class="status-select" [ngModel]="application.status" (ngModelChange)="updateApplicationStatus(application, $event)" [ngModelOptions]="{standalone:true}" [disabled]="applicationStatusUpdatingId() === application.id"><option value="SENT">Envoyée</option><option value="REVIEWED">Consultée</option><option value="INTERVIEW">Entretien</option><option value="ACCEPTED">Acceptée</option><option value="REJECTED">Refusée</option><option value="WITHDRAWN">Retirée</option></select><small *ngIf="applicationStatusUpdatingId() === application.id" class="status-updating">Enregistrement…</small></td></tr></tbody></table></div></div>
+
+        <div *ngIf="adminSection() === 'offers'" class="admin-offers-section">
           <div class="users-card-head"><div><h2>Job offer management</h2><p>Create, edit and remove opportunities visible to users.</p></div><span>{{ adminOffers().length }} offers</span></div>
           <div class="admin-offer-layout">
             <form #offerForm="ngForm" class="offer-form" (ngSubmit)="saveOffer()">
@@ -206,19 +312,22 @@
             <div class="admin-offer-list">
               <div *ngIf="!adminOffers().length" class="admin-offer-empty">No offers created yet.</div>
               <article *ngFor="let offer of adminOffers()">
-                <div class="admin-offer-info"><span>{{ offer.company.charAt(0).toUpperCase() }}</span><div><h3>{{ offer.title }}</h3><p>{{ offer.company }} · {{ offer.location }} · {{ offer.employmentType }}</p><small>Created {{ offer.createdAt | date:'mediumDate' }}</small></div></div>
-                <div class="admin-offer-actions"><button type="button" (click)="editOffer(offer)">Edit</button><button type="button" class="delete" (click)="deleteOffer(offer)">Delete</button></div>
+                <div class="admin-offer-info"><span>{{ offer.company.charAt(0).toUpperCase() }}</span><div><h3>{{ offer.title }} <em class="publication-pill" [class.archived]="!offer.active">{{ offer.active ? 'Published' : 'Archived' }}</em></h3><p>{{ offer.company }} · {{ offer.location }} · {{ offer.employmentType }}</p><small>Created {{ offer.createdAt | date:'mediumDate' }}</small></div></div>
+                <div class="admin-offer-actions"><button type="button" (click)="editOffer(offer)">Edit</button><button type="button" class="archive" (click)="toggleOfferActive(offer)">{{ offer.active ? 'Archive' : 'Publish' }}</button><button type="button" class="delete" (click)="deleteOffer(offer)">Delete</button></div>
               </article>
             </div>
           </div>
         </div>
 
         <div class="users-card admin-interviews-card"><div class="users-card-head"><div><h2>Interview simulations</h2><p>Review scores and feedback across all user simulations.</p></div><span>{{ adminInterviews().length }} simulations</span></div><div class="table-wrap"><table><thead><tr><th>Candidate</th><th>Job offer</th><th>Status</th><th>Score</th><th>Date</th><th>Feedback</th></tr></thead><tbody><tr *ngFor="let simulation of adminInterviews()"><td><span class="table-avatar">{{ simulation.candidateName.charAt(0).toUpperCase() }}</span><div><b>{{ simulation.candidateName }}</b><small class="admin-candidate-email">{{ simulation.candidateEmail }}</small></div></td><td><b>{{ simulation.offerTitle }}</b><small class="admin-candidate-email">{{ simulation.company }}</small></td><td><span class="role-pill" [class.admin]="simulation.status === 'IN_PROGRESS'">{{ simulation.status === 'COMPLETED' ? 'Completed' : 'In progress' }} · {{ simulation.answeredQuestions }}/{{ simulation.totalQuestions }}</span></td><td><b>{{ simulation.score === null ? '—' : simulation.score + '/100' }}</b></td><td>{{ simulation.createdAt | date:'mediumDate' }}</td><td><details class="admin-result-details"><summary>View results</summary><div><section *ngFor="let answer of simulation.answers"><b>{{ answer.type }} · {{ answer.score === null ? '—' : answer.score + '/100' }}</b><p>{{ answer.question }}</p><p>{{ answer.feedback }}</p><small *ngFor="let item of answer.strengths">✓ {{ item }}<br></small><small *ngFor="let item of answer.improvements">↗ {{ item }}<br></small></section><b>Overall strengths</b><p *ngFor="let item of simulation.strengths">{{ item }}</p><b>Areas to improve</b><p *ngFor="let item of simulation.weaknesses">{{ item }}</p><b>Recommendations</b><p *ngFor="let item of simulation.recommendations">{{ item }}</p><small *ngIf="!simulation.strengths.length && !simulation.weaknesses.length">No answers yet.</small></div></details></td></tr><tr *ngIf="!adminInterviews().length"><td colspan="6" class="admin-empty-row">No interview simulations have been submitted yet.</td></tr></tbody></table></div></div>
-
-        <div class="users-card"><div class="users-card-head"><div><h2>User accounts</h2><p>People with access to the CareerLens workspace.</p></div><span>{{ adminUsers().length }} accounts</span></div><div class="table-wrap"><table><thead><tr><th>User</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead><tbody><tr *ngFor="let account of adminUsers()"><td><span class="table-avatar">{{ account.fullName.charAt(0).toUpperCase() }}</span><b>{{ account.fullName }}</b></td><td>{{ account.email }}</td><td><span class="role-pill" [class.admin]="account.role === 'ADMIN'">{{ account.role }}</span></td><td>{{ account.createdAt | date:'mediumDate' }}</td></tr></tbody></table></div></div>
+        <div *ngIf="adminSection() === 'users'" class="users-card"><div class="users-card-head"><div><h2>Comptes utilisateurs</h2><p>Personnes ayant accès à la plateforme CareerLens.</p></div><span>{{ adminUsers().length }} compte(s)</span></div><div class="table-wrap"><table><thead><tr><th>Utilisateur</th><th>Email</th><th>Rôle</th><th>Inscription</th></tr></thead><tbody><tr *ngFor="let account of adminUsers()"><td><span class="table-avatar">{{ account.fullName.charAt(0).toUpperCase() }}</span><b>{{ account.fullName }}</b></td><td>{{ account.email }}</td><td><span class="role-pill" [class.admin]="account.role === 'ADMIN'">{{ account.role }}</span></td><td>{{ account.createdAt | date:'mediumDate' }}</td></tr></tbody></table></div></div>
       </ng-container>
+      </div>
+      </div>
     </section>
   </main>
 
   <footer><a class="brand footer-brand" href="#top"><span class="brand-mark">↗</span><span>Career<span>Lens</span></span></a><p>Smarter career decisions, powered by transparent AI.</p><span>© 2026</span></footer>
+  </div>
+  </ng-container>
 </div>

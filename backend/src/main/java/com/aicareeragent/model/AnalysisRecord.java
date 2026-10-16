@@ -22,6 +22,10 @@ public class AnalysisRecord {
     @JoinColumn(name = "user_id", nullable = false)
     private UserAccount user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "job_offer_id")
+    private JobOffer jobOffer;
+
     @Column(nullable = false)
     private double compatibilityScore;
 
@@ -30,8 +34,14 @@ public class AnalysisRecord {
 
     protected AnalysisRecord() {}
 
-    public AnalysisRecord(UserAccount user, double compatibilityScore) {
+    public AnalysisRecord(UserAccount user, JobOffer jobOffer, double compatibilityScore) {
         this.user = user;
+        this.jobOffer = jobOffer;
         this.compatibilityScore = compatibilityScore;
     }
+
+    public Long getId() { return id; }
+    public JobOffer getJobOffer() { return jobOffer; }
+    public double getCompatibilityScore() { return compatibilityScore; }
+    public Instant getCreatedAt() { return createdAt; }
 }
