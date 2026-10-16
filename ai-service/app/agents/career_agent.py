@@ -1,7 +1,6 @@
 import re
 from uuid import uuid4
-
-from app.tools.embedding_tool import calculate_embedding_similarity
+from app.tools.embedding_tool import calculate_embedding_similarities, calculate_embedding_similarity
 from app.tools.preprocessing_tool import preprocess_cv_text
 from app.tools.scoring_tool import ScoreInput, calculate_compatibility_score
 from app.tools.skill_matching_tool import compare_skills
@@ -57,6 +56,35 @@ class CareerAgent:
             "ai_explanation": {"summary": summary, "strengths": skill_result["matching_skills"], "skill_gaps": missing, "experience_analysis": f"Detected {candidate_years:g} years; role asks for {required_years:g} years.", "recommendations": recommendations, "cv_improvements": improvements},
             "status": "COMPLETED",
         }
+
+    def match_jobs(self, cv_text: str, offers: list[dict]) -> dict:
+        if not cv_text or not cv_text.strip():
+            raise ValueError("CV text is required")
+        if not offers:
+            return {"matches": [], "total_offers": 0}
+        descriptions = [offer["description"] for offer in offers]
+        embeddings = calculate_embedding_similarities(preprocess_cv_text(cv_text).text, descriptions)
+        candidate_skills = self._extract_terms(cv_text)
+        matches = []
+        for offer, embedding in zip(offers, embeddings):
+            core_skills = re.search(r"(?im)^Core skills:\s*(.+)$", offer["description"])
+            required_skills = [skill.strip().rstrip(".") for skill in core_skills.group(1).split(",") if skill.strip()] if core_skills else self._extract_terms(offer["description"])
+            skill_result = compare_skills(candidate_skills, required_skills, [])
+            skill_score = len(skill_result["matching_skills"]) / max(1, len(required_skills))
+            score = calculate_compatibility_score(ScoreInput(
+                skills_score=skill_score,
+                semantic_score=embedding["similarity"],
+                experience_score=1.0,
+                education_score=1.0,
+            ))["final_score"]
+            matches.append({
+                "offer": offer,
+                "compatibility_score": score,
+                "matching_skills": skill_result["matching_skills"],
+                "missing_required_skills": skill_result["missing_required_skills"],
+            })
+        matches.sort(key=lambda match: match["compatibility_score"], reverse=True)
+        return {"matches": matches[:50], "total_offers": len(offers)}
 
     @staticmethod
     def _extract_skills(text):

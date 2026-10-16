@@ -33,3 +33,7 @@ default-user:
   email: ${DEFAULT_USER_EMAIL:user@user.com}
   password: ${DEFAULT_USER_PASSWORD:user123}
   name: ${DEFAULT_USER_NAME:CareerLens User}
+app:
+  job-offers:
+    seed:
+      enabled: ${APP_JOB_OFFERS_SEED_ENABLED:false}

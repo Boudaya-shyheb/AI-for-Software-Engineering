@@ -1,7 +1,7 @@
 import { AfterViewInit, Component, ElementRef, Input, OnChanges, OnDestroy, SimpleChanges, ViewChild } from '@angular/core';
 import * as THREE from 'three';
 
-type SceneVariant = 'landing' | 'auth' | 'analyzer' | 'jobs' | 'applications' | 'history' | 'profile' | 'admin';
+type SceneVariant = 'landing' | 'auth' | 'analyzer' | 'jobs' | 'applications' | 'profile' | 'admin';
 
 @Component({
   selector: 'app-three-scene',
@@ -157,7 +157,6 @@ export class ThreeSceneComponent implements AfterViewInit, OnChanges, OnDestroy 
     if (this.variant === 'analyzer') this.addAnalyzerDecor(this.pageDecor);
     else if (this.variant === 'jobs') this.addJobsDecor(this.pageDecor);
     else if (this.variant === 'applications') this.addApplicationsDecor(this.pageDecor);
-    else if (this.variant === 'history') this.addHistoryDecor(this.pageDecor);
     else if (this.variant === 'profile') this.addProfileDecor(this.pageDecor);
     else if (this.variant === 'admin') this.addAdminDecor(this.pageDecor);
     else if (this.variant === 'auth') this.addPortalDecor(this.pageDecor);
@@ -202,16 +201,6 @@ export class ThreeSceneComponent implements AfterViewInit, OnChanges, OnDestroy 
       node.position.set(...position);
       group.add(node);
     });
-  }
-
-  private addHistoryDecor(group: THREE.Group): void {
-    const heights = [.55, .9, .7, 1.3, 1.05, 1.65];
-    heights.forEach((height, index) => {
-      const bar = new THREE.Mesh(new THREE.BoxGeometry(.24, height, .24), this.lineMaterial(index > 3 ? 0x7c4dff : 0x315ef5, .32 + index * .045));
-      bar.position.set(-4.5 + index * .42, -2.2 + height / 2, 0);
-      group.add(bar);
-    });
-    group.add(this.connectionLine(heights.map((height, index) => [-4.5 + index * .42, -1.95 + height, .15] as [number, number, number]), 0x22d3ee));
   }
 
   private addProfileDecor(group: THREE.Group): void {
