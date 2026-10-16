@@ -53,7 +53,7 @@ public class AdminJobOfferController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
-        if (applications.existsByJobOfferId(id) || favorites.existsByJobOfferId(id)) throw new ResponseStatusException(HttpStatus.CONFLICT, "Archive this offer because it has applications or favorites");
+        if (applications.existsByJobOfferId(id) || favorites.existsByJobOfferId(id)) throw new ResponseStatusException(HttpStatus.CONFLICT, "This offer still has linked records. Archive it instead.");
         offers.delete(find(id));
     }
 

@@ -21,7 +21,7 @@ services:
       EMBEDDING_MODEL: sentence-transformers/all-MiniLM-L6-v2
       LLM_ENABLED: "false"
     ports:
-      - "8000:8000"
+      - "18000:8000"
 
   backend:
     build: ./backend
@@ -35,8 +35,9 @@ services:
       ADMIN_PASSWORD: ahmed123
       DEFAULT_USER_EMAIL: user@user.com
       DEFAULT_USER_PASSWORD: user123
+      APP_JOB_OFFERS_SEED_ENABLED: "true"
     ports:
-      - "8081:8080"
+      - "18081:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,7 +47,7 @@ services:
   frontend:
     build: ./frontend
     environment:
-      VITE_API_URL: http://localhost:8081/api
+      VITE_API_URL: http://localhost:18081/api
     ports:
       - "5173:5173"
     depends_on:

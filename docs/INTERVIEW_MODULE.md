@@ -33,7 +33,9 @@ Le service actuel ne configure aucun modèle génératif externe. Ce module réu
 
 ## Vérification
 
-Tests ciblés dans `ai-service/tests/test_interviews.py` couvrent la personnalisation des questions, l’évaluation des réponses et la validation d’entrée. `backend/src/test/java/com/aicareeragent/service/InterviewServiceTest.java` couvre la création, l’évaluation, la fin de session et l’isolation par propriétaire.
+**Outil retenu : Pytest.** Le chapitre présente Pytest pour générer et vérifier des tests Python. C’est adapté au service FastAPI qui personnalise les questions et évalue les réponses, et le projet l’utilise déjà sans ajouter de dépendance.
+
+Le test de workflow dans `ai-service/tests/test_interviews.py` vérifie une simulation complète côté agent : génération des questions à partir du CV et de l’offre, évaluation d’une réponse, puis calcul du bilan. Les autres tests couvrent les compétences communes/manquantes, la langue du feedback et le rejet d’une entrée invalide. La commande pour ce fichier est `python -m pytest tests/test_interviews.py` depuis `ai-service/`. `backend/src/test/java/com/aicareeragent/service/InterviewServiceTest.java` couvre la création, l’évaluation, la fin de session et l’isolation par propriétaire.
 
 La vue admin liste le candidat, l’offre, l’état d’avancement, le score global et le feedback de chaque réponse. Elle ne renvoie ni le texte du CV ni les réponses brutes des utilisateurs.
 

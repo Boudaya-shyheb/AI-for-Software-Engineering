@@ -3,6 +3,7 @@ import { Component, computed, effect, ElementRef, inject, signal } from '@angula
 import { FormsModule } from '@angular/forms';
 import { animate, stagger } from 'motion';
 import { ThreeSceneComponent } from './three-scene.component';
+import { CareerVisualComponent } from './career-visual.component';
 
 interface AnalysisResult {
   compatibility_score: number;
@@ -22,7 +23,7 @@ interface AuthUser {
 }
 
 interface AuthPayload { token: string; user: AuthUser; }
-interface AdminStats { users: number; analyses: number; jobOffers: number; applications: number; }
+interface AdminStats { users: number; analyses: number; jobOffers: number; }
 interface AdminInterviewAnswer { question: string; type: string; score: number | null; feedback: string; strengths: string[]; improvements: string[]; }
 interface AdminInterviewResult { id: number; candidateName: string; candidateEmail: string; offerTitle: string; company: string; status: 'COMPLETED' | 'IN_PROGRESS'; score: number | null; answeredQuestions: number; totalQuestions: number; createdAt: string; answers: AdminInterviewAnswer[]; strengths: string[]; weaknesses: string[]; recommendations: string[]; }
 
@@ -38,18 +39,20 @@ interface JobOffer {
   active: boolean;
 }
 
+interface JobMatch { offer: JobOffer; compatibility_score: number; matching_skills: Array<{ candidate_skill: string; job_skill: string }>; missing_required_skills: string[]; }
+
 interface InterviewQuestion { type: string; question: string; }
 interface InterviewEvaluation { question: string; type: string; answer: string; score: number; feedback: string; strengths: string[]; improvements: string[]; }
 interface InterviewSummary { score: number; strengths: string[]; weaknesses: string[]; recommendations: string[]; }
 interface InterviewSession { id: number; offerId: number; offerTitle: string; company: string; questions: InterviewQuestion[]; profile: { matching_skills: string[]; skill_gaps: string[]; summary: string }; evaluations: InterviewEvaluation[]; currentQuestion: number; completed: boolean; summary: InterviewSummary | null; createdAt: string; evaluation?: InterviewEvaluation; }
 interface CandidateProfile { id: number; fullName: string; email: string; headline: string; savedCvText: string; skills: string; preferences: string; }
-interface HistoryItem { id: number; compatibilityScore: number; jobOfferId: number | null; jobTitle: string; company: string; createdAt: string; }
-interface ApplicationItem { id: number; jobOfferId: number; jobTitle: string; company: string; location: string; userId: number; candidateName: string; candidateEmail: string; status: string; coverLetter: string; createdAt: string; updatedAt: string; }
+interface CodeDebugFinding { bug_type: string; severity: string; line: number; message: string; recommendation: string; }
+interface CodeDebugResult { module_label: string; bug_type: string; analysis_method: string; code_was_executed: boolean; summary: string; findings: CodeDebugFinding[]; }
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, FormsModule, ThreeSceneComponent],
+  imports: [CommonModule, FormsModule, ThreeSceneComponent, CareerVisualComponent],
   templateUrl: './app.component.html',
   styleUrl: './styles.css',
 })
@@ -71,7 +74,7 @@ export class AppComponent {
   readonly marketingPreview = signal(true);
   readonly authLoading = signal(false);
   readonly authError = signal('');
-  readonly currentView = signal<'analyzer' | 'jobs' | 'interviews' | 'applications' | 'history' | 'profile' | 'admin'>('analyzer');
+  readonly currentView = signal<'analyzer' | 'jobs' | 'interviews' | 'profile' | 'debug' | 'admin'>('analyzer');
   readonly sidebarCollapsed = signal(false);
   readonly mobileSidebarOpen = signal(false);
   readonly uploadingCv = signal(false);
@@ -82,10 +85,35 @@ export class AppComponent {
   readonly adminUsers = signal<AuthUser[]>([]);
   readonly adminInterviews = signal<AdminInterviewResult[]>([]);
   readonly adminLoading = signal(false);
-  readonly adminSection = signal<'overview' | 'applications' | 'offers' | 'users'>('overview');
+  readonly adminSection = signal<'overview' | 'offers' | 'users'>('overview');
   readonly jobOffers = signal<JobOffer[]>([]);
+  readonly jobMatches = signal<JobMatch[]>([]);
+  readonly matchingJobsLoading = signal(false);
+  readonly matchingJobsError = signal('');
+  readonly matchingJobsTotal = signal(0);
+  readonly matchingJobsSearched = signal(false);
+  readonly jobSearch = signal('');
+  readonly jobCategory = signal('All domains');
+  readonly jobPage = signal(0);
+  readonly adminOfferPage = signal(0);
+  readonly jobPageSize = 12;
+  readonly adminOfferPageSize = 10;
+  readonly jobCategories = computed(() => ['All domains', ...new Set(this.jobOffers().map(offer => this.getOfferCategory(offer)).filter(Boolean).sort())]);
+  filteredJobOffers(): JobOffer[] {
+    const query = this.jobSearch().trim().toLocaleLowerCase();
+    return this.jobOffers().filter(offer => {
+      const matchesCategory = this.jobCategory() === 'All domains' || this.getOfferCategory(offer) === this.jobCategory();
+      const matchesType = !this.jobType || offer.employmentType === this.jobType;
+      const matchesFavorite = !this.favoritesOnly() || this.isFavorite(offer.id);
+      const searchable = `${offer.title} ${offer.company} ${offer.location} ${offer.employmentType} ${offer.description}`.toLocaleLowerCase();
+      return matchesCategory && matchesType && matchesFavorite && (!query || searchable.includes(query));
+    });
+  }
+  readonly jobPageCount = computed(() => Math.max(1, Math.ceil(this.filteredJobOffers().length / this.jobPageSize)));
+  readonly displayedJobOffers = computed(() => this.filteredJobOffers().slice(this.jobPage() * this.jobPageSize, (this.jobPage() + 1) * this.jobPageSize));
+  readonly displayedAdminOffers = computed(() => this.adminOffers().slice(this.adminOfferPage() * this.adminOfferPageSize, (this.adminOfferPage() + 1) * this.adminOfferPageSize));
+  readonly adminOfferPageCount = computed(() => Math.max(1, Math.ceil(this.adminOffers().length / this.adminOfferPageSize)));
   readonly offersLoading = signal(false);
-  readonly interviewSessions = signal<InterviewSession[]>([]);
   readonly interviewSession = signal<InterviewSession | null>(null);
   readonly interviewLoading = signal(false);
   readonly interviewError = signal('');
@@ -102,27 +130,20 @@ export class AppComponent {
   offerLocation = '';
   offerEmploymentType = 'CDI';
   offerDescription = '';
-  jobSearch = '';
   jobType = '';
   readonly profile = signal<CandidateProfile | null>(null);
   readonly profileLoading = signal(false);
   readonly profileSaving = signal(false);
   readonly profileMessage = signal('');
-  readonly history = signal<HistoryItem[]>([]);
-  readonly historyLoading = signal(false);
-  readonly applications = signal<ApplicationItem[]>([]);
-  readonly applicationsLoading = signal(false);
-  readonly applicationsRefreshing = signal(false);
-  readonly applicationsLastRefresh = signal<Date | null>(null);
-  readonly adminApplications = signal<ApplicationItem[]>([]);
-  readonly applicationSaving = signal(false);
-  readonly applicationMessage = signal('');
-  readonly adminApplicationMessage = signal('');
-  readonly applicationStatusUpdatingId = signal<number | null>(null);
   readonly favoriteOfferIds = signal<number[]>([]);
+  readonly debugModule = signal<'matching' | 'offers' | 'interviews' | 'profile'>('matching');
+  readonly debugLanguage = signal<'python' | 'java' | 'javascript' | 'typescript'>('python');
+  readonly debugCode = signal('');
+  readonly debugExpectedBehavior = signal('');
+  readonly debugResult = signal<CodeDebugResult | null>(null);
+  readonly debugLoading = signal(false);
+  readonly debugError = signal('');
   readonly favoritesOnly = signal(false);
-  coverLetter = '';
-  private applicationsRefreshTimer: number | null = null;
   profileFullName = '';
   profileHeadline = '';
   profileCv = '';
@@ -137,35 +158,12 @@ export class AppComponent {
     this.adminSection();
     window.setTimeout(() => this.animateCurrentView(), 0);
   });
-  readonly applicationChartData = computed(() => {
-    const definitions = [
-      { status: 'SENT', label: 'Envoyées', color: '#4d73e8' },
-      { status: 'REVIEWED', label: 'Consultées', color: '#37a2da' },
-      { status: 'INTERVIEW', label: 'Entretiens', color: '#8b62dc' },
-      { status: 'ACCEPTED', label: 'Acceptées', color: '#28a77b' },
-      { status: 'REJECTED', label: 'Refusées', color: '#e26767' },
-      { status: 'WITHDRAWN', label: 'Retirées', color: '#a5adba' },
-    ];
-    return definitions.map(item => ({ ...item, count: this.adminApplications().filter(application => application.status === item.status).length }));
-  });
   readonly activeOfferCount = computed(() => this.adminOffers().filter(offer => offer.active).length);
   readonly archivedOfferCount = computed(() => this.adminOffers().filter(offer => !offer.active).length);
 
-  applicationChartGradient(): string {
-    const data = this.applicationChartData();
-    const total = Math.max(1, data.reduce((sum, item) => sum + item.count, 0));
-    let cursor = 0;
-    const stops = data.filter(item => item.count > 0).map(item => {
-      const start = cursor;
-      cursor += (item.count / total) * 100;
-      return `${item.color} ${start}% ${cursor}%`;
-    });
-    return stops.length ? `conic-gradient(${stops.join(',')})` : 'conic-gradient(#e7ebf3 0 100%)';
-  }
-
   metricBarHeight(value: number): number {
     const stats = this.adminStats();
-    const values = [stats?.users ?? 0, stats?.jobOffers ?? 0, stats?.applications ?? 0, stats?.analyses ?? 0];
+    const values = [stats?.users ?? 0, stats?.jobOffers ?? 0, this.adminInterviews().length, stats?.analyses ?? 0];
     const maximum = Math.max(1, ...values);
     return Math.max(12, Math.round((value / maximum) * 100));
   }
@@ -188,9 +186,17 @@ export class AppComponent {
       localStorage.setItem('careerlens_user', JSON.stringify(payload.user));
       this.token.set(payload.token);
       this.user.set(payload.user);
+      this.profile.set(null);
+      this.profileCv = '';
+      this.cvText = '';
+      this.cvFilename.set('');
       this.publicView.set('landing');
       this.marketingPreview.set(false);
       this.password = '';
+      this.profileLoading.set(true);
+      void this.loadProfileData()
+        .catch(profileError => this.error.set(profileError instanceof Error ? profileError.message : 'Unable to load your profile.'))
+        .finally(() => this.profileLoading.set(false));
     } catch (authError) {
       this.authError.set(authError instanceof Error ? authError.message : 'Authentication failed');
     } finally {
@@ -223,31 +229,41 @@ export class AppComponent {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  returnToApplication(): void {
+  returnToWorkspace(): void {
     this.marketingPreview.set(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  openFromLanding(view: 'analyzer' | 'jobs' | 'applications' | 'history' | 'profile' | 'admin'): void {
+  openFromLanding(view: 'analyzer' | 'jobs' | 'profile' | 'admin'): void {
     if (!this.user()) { this.openAuth('login'); return; }
-    this.returnToApplication();
+    this.returnToWorkspace();
     window.setTimeout(() => {
       if (view === 'analyzer') this.showAnalyzer();
       else if (view === 'jobs') void this.openJobs();
-      else if (view === 'applications') void this.openApplications();
-      else if (view === 'history') void this.openHistory();
       else if (view === 'profile') void this.openProfile();
       else if (view === 'admin' && this.user()?.role === 'ADMIN') void this.openAdmin();
     }, 0);
   }
 
   logout(): void {
-    this.stopApplicationsRefresh();
     localStorage.removeItem('careerlens_token');
     localStorage.removeItem('careerlens_user');
     this.token.set('');
     this.user.set(null);
     this.result.set(null);
+    this.selectedOffer.set(null);
+    this.cvText = '';
+    this.jobDescription = '';
+    this.cvFilename.set('');
+    this.profile.set(null);
+    this.profileCv = '';
+    this.profileFullName = '';
+    this.profileHeadline = '';
+    this.profileSkills = '';
+    this.profilePreferences = '';
+    this.jobMatches.set([]);
+    this.interviewCv.set('');
+    this.interviewSession.set(null);
     this.currentView.set('analyzer');
     this.publicView.set('landing');
     this.marketingPreview.set(false);
@@ -300,6 +316,8 @@ export class AppComponent {
       } else if (target === 'cv') {
         this.cvText = payload.text;
         this.cvFilename.set(payload.filename);
+        this.result.set(null);
+        if (this.currentView() === 'analyzer') this.resetJobMatches();
       } else {
         this.jobDescription = payload.text;
         this.jobFilename.set(payload.filename);
@@ -315,22 +333,22 @@ export class AppComponent {
   async openAdmin(): Promise<void> {
     this.currentView.set('admin');
     this.adminSection.set('overview');
+    this.adminOfferPage.set(0);
     this.adminLoading.set(true);
     this.error.set('');
     try {
-      const [statsResponse, usersResponse, offersResponse, applicationsResponse, interviewsResponse] = await Promise.all([
+      const [statsResponse, usersResponse, offersResponse, interviewsResponse] = await Promise.all([
         this.authorizedFetch(`${this.apiUrl}/admin/stats`),
         this.authorizedFetch(`${this.apiUrl}/admin/users`),
         this.authorizedFetch(`${this.apiUrl}/admin/job-offers`),
-        this.authorizedFetch(`${this.apiUrl}/admin/applications`),
         this.authorizedFetch(`${this.apiUrl}/admin/interviews`),
       ]);
-      if (!statsResponse.ok || !usersResponse.ok || !offersResponse.ok || !applicationsResponse.ok || !interviewsResponse.ok) throw new Error('Unable to load the admin dashboard.');
+      if (!statsResponse.ok || !usersResponse.ok || !offersResponse.ok || !interviewsResponse.ok) throw new Error('Unable to load the admin dashboard.');
       this.adminStats.set(await statsResponse.json() as AdminStats);
       this.adminUsers.set(await usersResponse.json() as AuthUser[]);
       this.adminOffers.set(await offersResponse.json() as JobOffer[]);
-      this.adminApplications.set(await applicationsResponse.json() as ApplicationItem[]);
       this.adminInterviews.set(await interviewsResponse.json() as AdminInterviewResult[]);
+      this.adminOfferPage.set(0);
     } catch (adminError) {
       this.error.set(adminError instanceof Error ? adminError.message : 'Admin dashboard failed to load.');
     } finally {
@@ -340,6 +358,7 @@ export class AppComponent {
 
   async openJobs(): Promise<void> {
     this.currentView.set('jobs');
+    this.jobPage.set(0);
     this.selectedOffer.set(null);
     this.result.set(null);
     this.error.set('');
@@ -348,16 +367,6 @@ export class AppComponent {
       const profileResponse = await this.authorizedFetch(`${this.apiUrl}/profile`);
       if (profileResponse.ok) this.profile.set(await profileResponse.json() as CandidateProfile);
     }
-  }
-
-  filteredJobOffers(): JobOffer[] {
-    const query = this.jobSearch.trim().toLowerCase();
-    return this.jobOffers().filter(offer => {
-      const text = `${offer.title} ${offer.company} ${offer.location} ${offer.description}`.toLowerCase();
-      return (!query || text.includes(query))
-        && (!this.jobType || offer.employmentType === this.jobType)
-        && (!this.favoritesOnly() || this.isFavorite(offer.id));
-    });
   }
 
   async loadFavorites(): Promise<void> {
@@ -382,19 +391,22 @@ export class AppComponent {
     this.currentView.set('profile');
     this.profileLoading.set(true);
     this.error.set('');
-    try {
-      const response = await this.authorizedFetch(`${this.apiUrl}/profile`);
-      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to load your profile.'));
-      const profile = await response.json() as CandidateProfile;
-      this.profile.set(profile);
-      this.profileFullName = profile.fullName;
-      this.profileHeadline = profile.headline;
-      this.profileCv = profile.savedCvText;
-      this.profileSkills = profile.skills;
-      this.profilePreferences = profile.preferences;
-    } catch (profileError) {
-      this.error.set(profileError instanceof Error ? profileError.message : 'Unable to load your profile.');
-    } finally { this.profileLoading.set(false); }
+    try { await this.loadProfileData(); }
+    catch (profileError) { this.error.set(profileError instanceof Error ? profileError.message : 'Unable to load your profile.'); }
+    finally { this.profileLoading.set(false); }
+  }
+
+  private async loadProfileData(): Promise<CandidateProfile> {
+    const response = await this.authorizedFetch(`${this.apiUrl}/profile`);
+    if (!response.ok) throw new Error(await this.responseError(response, 'Unable to load your profile.'));
+    const profile = await response.json() as CandidateProfile;
+    this.profile.set(profile);
+    this.profileFullName = profile.fullName;
+    this.profileHeadline = profile.headline;
+    this.profileCv = profile.savedCvText;
+    this.profileSkills = profile.skills;
+    this.profilePreferences = profile.preferences;
+    return profile;
   }
 
   async saveProfile(): Promise<void> {
@@ -421,122 +433,29 @@ export class AppComponent {
     } finally { this.profileSaving.set(false); }
   }
 
-  useSavedCv(): void {
-    const saved = this.profile()?.savedCvText || this.profileCv;
-    if (!saved) { this.error.set('Save a CV in your profile first.'); return; }
-    this.cvText = saved;
-    this.cvFilename.set('Saved profile CV');
-  }
-
-  async openHistory(): Promise<void> {
-    this.currentView.set('history');
-    this.historyLoading.set(true);
+  async useSavedCv(): Promise<void> {
     this.error.set('');
+    const needsProfileLoad = !this.profile();
+    if (needsProfileLoad) this.profileLoading.set(true);
     try {
-      const response = await this.authorizedFetch(`${this.apiUrl}/history`);
-      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to load your history.'));
-      this.history.set(await response.json() as HistoryItem[]);
-    } catch (historyError) {
-      this.error.set(historyError instanceof Error ? historyError.message : 'Unable to load your history.');
-    } finally { this.historyLoading.set(false); }
-  }
-
-  async openApplications(): Promise<void> {
-    this.currentView.set('applications');
-    await this.loadApplications(true);
-    this.startApplicationsRefresh();
-  }
-
-  async refreshApplications(): Promise<void> {
-    await this.loadApplications(false);
-  }
-
-  private async loadApplications(showLoader: boolean): Promise<void> {
-    if (showLoader) this.applicationsLoading.set(true);
-    else this.applicationsRefreshing.set(true);
-    this.error.set('');
-    try {
-      const response = await this.authorizedFetch(`${this.apiUrl}/applications`);
-      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to load applications.'));
-      this.applications.set(await response.json() as ApplicationItem[]);
-      this.applicationsLastRefresh.set(new Date());
-    } catch (applicationError) {
-      this.error.set(applicationError instanceof Error ? applicationError.message : 'Unable to load applications.');
+      const profile = this.profile() ?? await this.loadProfileData();
+      const saved = profile.savedCvText.trim();
+      if (!saved) {
+        this.error.set('No CV is saved in your profile yet. Add one in Profile, then come back here.');
+        return;
+      }
+      this.cvText = saved;
+      this.cvFilename.set('Saved profile CV');
+      if (this.currentView() === 'analyzer') this.resetJobMatches();
+      else this.result.set(null);
+    } catch (profileError) {
+      this.error.set(profileError instanceof Error ? profileError.message : 'Unable to load your saved CV.');
     } finally {
-      this.applicationsLoading.set(false);
-      this.applicationsRefreshing.set(false);
+      if (needsProfileLoad) this.profileLoading.set(false);
     }
   }
 
-  private startApplicationsRefresh(): void {
-    if (this.applicationsRefreshTimer !== null) return;
-    this.applicationsRefreshTimer = window.setInterval(() => {
-      if (this.currentView() === 'applications' && this.token()) void this.loadApplications(false);
-    }, 5000);
-  }
-
-  private stopApplicationsRefresh(): void {
-    if (this.applicationsRefreshTimer === null) return;
-    window.clearInterval(this.applicationsRefreshTimer);
-    this.applicationsRefreshTimer = null;
-  }
-
-  async applyToSelectedOffer(): Promise<void> {
-    const offer = this.selectedOffer();
-    if (!offer || this.applicationSaving()) return;
-    this.applicationSaving.set(true); this.applicationMessage.set(''); this.error.set('');
-    try {
-      const response = await this.authorizedFetch(`${this.apiUrl}/applications`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobOfferId: offer.id, coverLetter: this.coverLetter }) });
-      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to submit application.'));
-      this.applicationMessage.set('Application submitted successfully.');
-    } catch (applyError) { this.error.set(applyError instanceof Error ? applyError.message : 'Unable to submit application.'); }
-    finally { this.applicationSaving.set(false); }
-  }
-
-  async withdrawApplication(application: ApplicationItem): Promise<void> {
-    if (!window.confirm(`Withdraw your application for “${application.jobTitle}”?`)) return;
-    const response = await this.authorizedFetch(`${this.apiUrl}/applications/${application.id}`, { method: 'DELETE' });
-    if (!response.ok) { this.error.set(await this.responseError(response, 'Unable to withdraw application.')); return; }
-    await this.openApplications();
-  }
-
-  async updateApplicationStatus(application: ApplicationItem, status: string): Promise<void> {
-    this.adminApplicationMessage.set('');
-    this.error.set('');
-    this.applicationStatusUpdatingId.set(application.id);
-    try {
-      const response = await this.authorizedFetch(`${this.apiUrl}/admin/applications/${application.id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
-      if (!response.ok) throw new Error(await this.responseError(response, 'Impossible de modifier le statut.'));
-      const updated = await response.json() as ApplicationItem;
-      this.adminApplications.update(items => items.map(item => item.id === updated.id ? updated : item));
-      this.adminApplicationMessage.set(`Le statut de ${updated.candidateName} est maintenant « ${this.applicationStatusLabel(updated.status)} ».`);
-    } catch (statusError) {
-      this.error.set(statusError instanceof Error ? statusError.message : 'Impossible de modifier le statut.');
-    } finally {
-      this.applicationStatusUpdatingId.set(null);
-    }
-  }
-
-  applicationStatusLabel(status: string): string {
-    return ({ SENT: 'Envoyée', REVIEWED: 'Consultée', INTERVIEW: 'Entretien', ACCEPTED: 'Acceptée', REJECTED: 'Refusée', WITHDRAWN: 'Retirée' } as Record<string, string>)[status] ?? status;
-  }
-
-  applicationStatusMessage(status: string): string {
-    return ({
-      SENT: 'Votre candidature a bien été transmise à l’entreprise.',
-      REVIEWED: 'Votre candidature a été consultée par le recruteur.',
-      INTERVIEW: 'Bonne nouvelle : vous avez été sélectionné(e) pour un entretien.',
-      ACCEPTED: 'Félicitations ! Votre candidature a été acceptée.',
-      REJECTED: 'Votre candidature n’a malheureusement pas été retenue.',
-      WITHDRAWN: 'Vous avez retiré cette candidature.',
-    } as Record<string, string>)[status] ?? 'Le statut de votre candidature a été mis à jour.';
-  }
-
-  applicationStatusIcon(status: string): string {
-    return ({ SENT: '↗', REVIEWED: '◉', INTERVIEW: '◷', ACCEPTED: '✓', REJECTED: '×', WITHDRAWN: '−' } as Record<string, string>)[status] ?? '•';
-  }
-
-  selectAdminSection(section: 'overview' | 'applications' | 'offers' | 'users'): void {
+  selectAdminSection(section: 'overview' | 'offers' | 'users'): void {
     this.adminSection.set(section);
   }
 
@@ -544,14 +463,19 @@ export class AppComponent {
   closeMobileSidebar(): void { this.mobileSidebarOpen.set(false); }
 
   currentViewLabel(): string {
-    return ({ analyzer: 'Matching IA', jobs: 'Offres d’emploi', applications: 'Mes candidatures', history: 'Historique', profile: 'Mon profil', admin: 'Administration' } as const)[this.currentView()];
+    return ({ analyzer: 'Matching IA', jobs: 'Offres d’emploi', interviews: 'Interview practice', profile: 'Mon profil', debug: 'AI Code Debugger', admin: 'Administration' } as const)[this.currentView()];
+  }
+
+  sceneVariant(): 'analyzer' | 'jobs' | 'profile' | 'admin' {
+    const view = this.currentView();
+    return view === 'interviews' || view === 'debug' ? 'jobs' : view;
   }
 
   private animateCurrentView(): void {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const root = this.host.nativeElement as HTMLElement;
     const targets = Array.from(root.querySelectorAll<HTMLElement>(
-      '.landing-hero-copy > *, .landing-visual, .landing-logo-strip > *, .landing-section-heading, .landing-steps > *, .landing-bento > *, .landing-cta > *, .auth-brand, .auth-message > *, .auth-proof, .auth-card > *, main > section:not(.processing) > .jobs-heading, main > section:not(.processing) > .section-heading, .hero > *, .analysis-form > *, .job-filters, .job-grid > *, .offer-detail, .job-match-card, .application-grid > *, .history-list > *, .profile-layout > *, .admin-main > .admin-hero, .admin-main .stat-grid > *, .dashboard-charts > *, .admin-overview-actions > *, .admin-applications, .admin-offers-section, .admin-main > .users-card'
+      '.landing-hero-copy > *, .landing-visual, .landing-logo-strip > *, .landing-section-heading, .landing-steps > *, .landing-bento > *, .landing-cta > *, .auth-brand, .auth-message > *, .auth-proof, .auth-card > *, main > section:not(.processing) > .jobs-heading, main > section:not(.processing) > .section-heading, .hero > *, .analysis-form > *, .job-filters, .job-grid > *, .offer-detail, .job-match-card, .history-list > *, .profile-layout > *, .admin-main > .admin-hero, .admin-main .stat-grid > *, .dashboard-charts > *, .admin-overview-actions > *, .admin-offers-section, .admin-main > .users-card'
     )).filter(element => element.offsetParent !== null);
     if (!targets.length) return;
     animate(targets, { opacity: [0, 1], y: [18, 0], scale: [.985, 1] }, {
@@ -607,17 +531,7 @@ export class AppComponent {
     this.currentView.set('interviews');
     this.interviewSession.set(null);
     this.interviewError.set('');
-    await Promise.all([this.loadJobOffers(), this.loadInterviewHistory()]);
-  }
-
-  async loadInterviewHistory(): Promise<void> {
-    try {
-      const response = await this.authorizedFetch(`${this.apiUrl}/interviews`);
-      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to load interview history.'));
-      this.interviewSessions.set(await response.json() as InterviewSession[]);
-    } catch (error) {
-      this.interviewError.set(error instanceof Error ? error.message : 'Unable to load interview history.');
-    }
+    await this.loadJobOffers();
   }
 
   async startInterview(): Promise<void> {
@@ -629,7 +543,6 @@ export class AppComponent {
       const response = await this.authorizedFetch(`${this.apiUrl}/interviews`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ offerId, cvText: this.interviewCv() }) });
       if (!response.ok) throw new Error(await this.responseError(response, 'Unable to generate interview questions.'));
       this.interviewSession.set(await response.json() as InterviewSession);
-      await this.loadInterviewHistory();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) { this.interviewError.set(error instanceof Error ? error.message : 'Unable to start the interview.'); }
     finally { this.interviewLoading.set(false); }
@@ -644,18 +557,7 @@ export class AppComponent {
       if (!response.ok) throw new Error(await this.responseError(response, 'Unable to evaluate this answer.'));
       const updated = await response.json() as InterviewSession;
       this.interviewSession.set(updated); this.interviewAnswer.set('');
-      await this.loadInterviewHistory();
     } catch (error) { this.interviewError.set(error instanceof Error ? error.message : 'Unable to submit this answer.'); }
-    finally { this.interviewLoading.set(false); }
-  }
-
-  async viewInterview(session: InterviewSession): Promise<void> {
-    this.interviewError.set(''); this.interviewLoading.set(true);
-    try {
-      const response = await this.authorizedFetch(`${this.apiUrl}/interviews/${session.id}`);
-      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to load this interview.'));
-      this.interviewSession.set(await response.json() as InterviewSession); this.interviewAnswer.set('');
-    } catch (error) { this.interviewError.set(error instanceof Error ? error.message : 'Unable to load this interview.'); }
     finally { this.interviewLoading.set(false); }
   }
 
@@ -681,6 +583,7 @@ export class AppComponent {
       const response = await this.authorizedFetch(`${this.apiUrl}/job-offers`);
       if (!response.ok) throw new Error(await this.responseError(response, 'Unable to load job offers.'));
       this.jobOffers.set(await response.json() as JobOffer[]);
+      this.jobPage.set(0);
     } catch (offersError) {
       this.error.set(offersError instanceof Error ? offersError.message : 'Unable to load job offers.');
     } finally {
@@ -688,13 +591,78 @@ export class AppComponent {
     }
   }
 
+  async runCareerAnalysis(): Promise<void> {
+    if (!this.cvText.trim() || this.loading() || this.matchingJobsLoading()) return;
+    this.error.set('');
+    this.result.set(null);
+    const matched = await this.findMatchingJobs(this.cvText);
+    if (!matched) return;
+    const bestOffer = this.jobMatches()[0]?.offer;
+    if (!bestOffer) {
+      this.error.set('Aucune offre publiée ne correspond à votre profil pour le moment.');
+      return;
+    }
+    this.selectedOffer.set(bestOffer);
+    this.jobDescription = bestOffer.description;
+    await this.analyze();
+  }
+
+  private async findMatchingJobs(cvText: string): Promise<boolean> {
+    if (!cvText.trim() || this.matchingJobsLoading()) return false;
+    this.matchingJobsLoading.set(true);
+    this.matchingJobsError.set('');
+    this.jobMatches.set([]);
+    this.matchingJobsTotal.set(0);
+    this.matchingJobsSearched.set(false);
+    try {
+      const response = await this.authorizedFetch(`${this.apiUrl}/job-offers/matches`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cvText }),
+      });
+      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to find matching opportunities.'));
+      const payload = await response.json() as { matches: JobMatch[]; total_offers: number };
+      this.jobMatches.set(payload.matches ?? []);
+      this.matchingJobsTotal.set(payload.total_offers ?? 0);
+      this.matchingJobsSearched.set(true);
+      return true;
+    } catch (error) {
+      this.matchingJobsError.set(error instanceof Error ? error.message : 'Unable to find matching opportunities.');
+      return false;
+    } finally {
+      this.matchingJobsLoading.set(false);
+    }
+  }
+
+  resetJobMatches(): void {
+    this.result.set(null);
+    this.selectedOffer.set(null);
+    this.jobMatches.set([]);
+    this.matchingJobsError.set('');
+    this.matchingJobsTotal.set(0);
+    this.matchingJobsSearched.set(false);
+  }
+
+  openMatchedOffer(offer: JobOffer): void {
+    this.currentView.set('jobs');
+    this.selectedOffer.set(offer);
+    this.jobDescription = offer.description;
+    this.result.set(null);
+    this.error.set('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async practiceMatchedOffer(offer: JobOffer): Promise<void> {
+    this.interviewOfferId.set(offer.id);
+    this.interviewCv.set(this.cvText);
+    await this.openInterviews();
+  }
+
   selectOffer(offer: JobOffer): void {
     this.selectedOffer.set(offer);
     this.jobDescription = offer.description;
     this.result.set(null);
     this.error.set('');
-    this.applicationMessage.set('');
-    this.coverLetter = '';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -793,10 +761,36 @@ export class AppComponent {
     if (!offersResponse.ok || !statsResponse.ok) throw new Error('Unable to refresh job offers.');
     this.adminOffers.set(await offersResponse.json() as JobOffer[]);
     this.adminStats.set(await statsResponse.json() as AdminStats);
+    this.adminOfferPage.set(Math.min(this.adminOfferPage(), Math.max(0, Math.ceil(this.adminOffers().length / this.adminOfferPageSize) - 1)));
     this.jobOffers.set(this.adminOffers().filter(offer => offer.active));
   }
 
   showAnalyzer(): void { this.currentView.set('analyzer'); this.closeMobileSidebar(); }
+  openCodeDebugger(): void { this.returnToWorkspace(); this.currentView.set('debug'); this.closeMobileSidebar(); }
+  async analyzeCode(): Promise<void> {
+    if (!this.debugCode().trim() || this.debugLoading()) return;
+    this.debugLoading.set(true);
+    this.debugError.set('');
+    this.debugResult.set(null);
+    try {
+      const response = await this.authorizedFetch(`${this.apiUrl}/code-debug`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ module: this.debugModule(), language: this.debugLanguage(), code: this.debugCode(), expected_behavior: this.debugExpectedBehavior() }),
+      });
+      if (!response.ok) throw new Error(await this.responseError(response, 'Code analysis failed.'));
+      this.debugResult.set(await response.json() as CodeDebugResult);
+    } catch (error) {
+      this.debugError.set(error instanceof Error ? error.message : 'Code analysis failed.');
+    } finally {
+      this.debugLoading.set(false);
+    }
+  }
+  getOfferCategory(offer: JobOffer): string { return offer.description.match(/^Domain:\s*(.+)$/m)?.[1]?.trim() ?? 'Other'; }
+  getOfferExcerpt(offer: JobOffer): string { return offer.description.split('\n').filter(line => !line.startsWith('Fictional CareerLens demo listing') && !line.startsWith('Domain: ') && !line.startsWith('Level: ')).join(' '); }
+  setJobSearch(value: string): void { this.jobSearch.set(value); this.jobPage.set(0); }
+  setJobCategory(value: string): void { this.jobCategory.set(value); this.jobPage.set(0); }
+  changeJobPage(delta: number): void { this.jobPage.set(Math.min(this.jobPageCount() - 1, Math.max(0, this.jobPage() + delta))); }
+  changeAdminOfferPage(delta: number): void { this.adminOfferPage.set(Math.min(this.adminOfferPageCount() - 1, Math.max(0, this.adminOfferPage() + delta))); }
   get apiUrl(): string { return '/api'; }
   score(value: number | undefined): number { return Math.round((value ?? 0) * 100); }
   compatibilityScore(): number { return Math.round((this.result()?.compatibility_score ?? 0) * 1000) / 10; }

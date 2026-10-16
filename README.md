@@ -168,7 +168,7 @@ The AI service is the core of the system. It follows a deterministic pipeline:
 
 ### 1) AI Service
 
-Base URL: http://localhost:8000
+Base URL (Docker Compose): http://localhost:18000
 
 Endpoint:
 - POST /api/analyses
@@ -216,7 +216,7 @@ Important note:
 
 ### 2) Backend
 
-Base URL: http://localhost:8081
+Base URL (Docker Compose): http://localhost:18081
 
 Endpoint:
 - POST /api/analyses
@@ -239,8 +239,8 @@ When using Docker Compose, the project runs these containers:
 | Service | URL | Purpose |
 | --- | --- | --- |
 | Frontend | http://localhost:5173 | User interface |
-| Backend | http://localhost:8081 | Spring API gateway |
-| AI service | http://localhost:8000/docs | FastAPI app and Swagger UI |
+| Backend | http://localhost:18081 | Spring API gateway |
+| AI service | http://localhost:18000/docs | FastAPI app and Swagger UI |
 | PostgreSQL | localhost:5432 | Users, job offers, and analysis history |
 
 ## Environment Variables
@@ -258,7 +258,7 @@ The Docker Compose setup defines these core environment settings:
 - SPRING_DATASOURCE_PASSWORD=career
 
 ### Frontend
-- VITE_API_URL=http://localhost:8081/api
+- VITE_API_URL=http://localhost:18081/api
 
 ## Running the Project
 
@@ -278,8 +278,8 @@ This starts all services together:
 
 Then open:
 - Frontend: http://localhost:5173
-- Backend health: http://localhost:8081/actuator/health
-- AI service docs: http://localhost:8000/docs
+- Backend health: http://localhost:18081/actuator/health
+- AI service docs: http://localhost:18000/docs
 
 ### Option 2: Run services individually
 
@@ -365,7 +365,7 @@ This project is a working demonstration rather than a full production-grade recr
 You can test the backend from the command line using curl:
 
 ```bash
-curl -X POST http://localhost:8081/api/analyses \
+curl -X POST http://localhost:18081/api/analyses \
   -H "Content-Type: application/json" \
   -d '{
     "cv_text": "Software engineer with Java, Spring Boot, REST APIs, and PostgreSQL experience.",
@@ -397,8 +397,8 @@ Ouvrir ensuite http://localhost:5173.
 Services disponibles :
 
 - Frontend Angular : http://localhost:5173
-- API Spring Boot : http://localhost:8081/actuator/health
-- Service IA FastAPI : http://localhost:8000/docs
+- API Spring Boot : http://localhost:18081/actuator/health
+- Service IA FastAPI : http://localhost:18000/docs
 - PostgreSQL : localhost:5432
 
 Le premier build du service IA peut prendre quelques minutes, car il installe PyTorch CPU et les modèles de traitement du langage.
@@ -429,8 +429,19 @@ Les deux zones acceptent la saisie manuelle ou l’import d’un document :
 
 Le texte extrait reste modifiable avant de lancer l’analyse. Le score retourné est un **AI Compatibility Score** explicable ; il ne représente pas une probabilité d’embauche.
 
+### Scénario candidat après connexion
+
+1. Connectez-vous ou créez un compte. L’espace Matching IA s’ouvre.
+2. Enregistrez votre CV dans **Profil**, puis cliquez sur **Save my profile**. Le CV est privé à votre compte.
+3. Dans **Matching IA**, choisissez **Use my CV** pour réutiliser le CV enregistré, ou importez un nouveau document.
+4. Cliquez sur **Analyze my CV & find matching jobs**. CareerLens classe les offres publiées, sélectionne la mieux classée et génère son rapport de compatibilité.
+5. Consultez le rapport et les autres offres classées. Vous pouvez ouvrir une offre ou lancer une simulation d’entretien personnalisée.
+6. Consultez le rapport et les offres classées ; les simulations restent accessibles dans **Interview practice**. Le matching ne soumet aucune candidature à votre place.
+
+Pour voir le parcours sans lancer les services, ouvrez [`docs/demo-matching.html`](docs/demo-matching.html) dans un navigateur. Cette maquette est autonome et utilise des résultats fictifs.
+
 ## Offres d’emploi
 
 Le compte administrateur dispose d’un CRUD complet pour publier, modifier et supprimer les offres. Chaque offre contient un titre, une entreprise, une localisation, un type de contrat et une description détaillée.
 
- Les utilisateurs retrouvent les offres publiées dans la page **Job offers**. Après avoir choisi une offre, ils peuvent importer leur CV puis lancer directement le matching IA avec la description enregistrée.
+Les utilisateurs retrouvent les offres publiées dans la page **Offres**. Ils peuvent réutiliser le CV de leur profil ou importer un autre CV, puis lancer le matching IA avec la description enregistrée.

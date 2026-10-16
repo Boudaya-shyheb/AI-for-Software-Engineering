@@ -5,8 +5,8 @@
       <button type="button" [class.active]="marketingPreview() || !user()" (click)="openMarketing()">Accueil</button>
       <button type="button" [class.active]="user() && !marketingPreview() && currentView() === 'analyzer'" (click)="openFromLanding('analyzer')">Matching IA</button>
       <button type="button" [class.active]="user() && !marketingPreview() && currentView() === 'jobs'" (click)="openFromLanding('jobs')">Offres</button>
-      <button type="button" [class.active]="user() && !marketingPreview() && currentView() === 'applications'" (click)="openFromLanding('applications')">Candidatures</button>
-      <button type="button" [class.active]="user() && !marketingPreview() && currentView() === 'history'" (click)="openFromLanding('history')">Historique</button>
+      <button *ngIf="user()?.role !== 'ADMIN'" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'interviews'" (click)="openInterviews()">Interview practice</button>
+      <button *ngIf="user()" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'debug'" (click)="openCodeDebugger()">AI Code Debugger</button>
       <button type="button" [class.active]="user() && !marketingPreview() && currentView() === 'profile'" (click)="openFromLanding('profile')">Profil</button>
       <button *ngIf="!user() || user()?.role === 'ADMIN'" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'admin'" (click)="openFromLanding('admin')">Admin</button>
     </div>
@@ -21,17 +21,16 @@
     <section id="accueil" class="landing-hero">
       <app-three-scene class="landing-three" theme="dark" variant="landing" [density]="240"></app-three-scene>
       <div class="landing-glow glow-one"></div><div class="landing-glow glow-two"></div><div class="landing-orbit-ring orbit-ring-one"><i></i></div><div class="landing-orbit-ring orbit-ring-two"><i></i></div><span class="landing-float-piece float-piece-one">AI</span><span class="landing-float-piece float-piece-two">✦</span><span class="landing-float-piece float-piece-three">92%</span><span class="landing-float-piece float-piece-four">CV</span>
-      <div class="landing-hero-copy"><p class="landing-badge"><i></i> AI-POWERED · SMART MATCHING · REAL OPPORTUNITIES</p><h1>Trouvez les bonnes opportunités.<br><em>Plus rapidement.</em></h1><p>CareerLens comprend vos compétences, analyse les offres et transforme chaque candidature en une décision plus claire et mieux préparée.</p><div class="landing-hero-actions"><button type="button" class="landing-primary" (click)="openAuth('register')">Commencer gratuitement <span>→</span></button><a href="#fonctionnement" class="landing-secondary"><i>▶</i> Découvrir le produit</a></div><div class="landing-proof"><div><span>A</span><span>S</span><span>M</span><span>+</span></div><p><b>10 000+ candidats accompagnés</b><small>Des décisions carrière alimentées par une IA transparente.</small></p></div></div>
+      <div class="landing-hero-copy"><p class="landing-badge"><i></i> AI-POWERED · SMART MATCHING · REAL OPPORTUNITIES</p><h1>Trouvez les bonnes opportunités.<br><em>Plus rapidement.</em></h1><p>CareerLens comprend vos compétences, analyse les offres et transforme votre CV en un plan d’action clair et personnalisé.</p><div class="landing-hero-actions"><button type="button" class="landing-primary" (click)="openAuth('register')">Commencer gratuitement <span>→</span></button><a href="#fonctionnement" class="landing-secondary"><i>▶</i> Découvrir le produit</a></div><div class="landing-proof"><div><span>A</span><span>S</span><span>M</span><span>+</span></div><p><b>10 000+ candidats accompagnés</b><small>Des décisions carrière alimentées par une IA transparente.</small></p></div></div>
       <div class="landing-visual" aria-label="Aperçu du matching CareerLens"><div class="visual-grid"></div><article class="candidate-preview"><div class="preview-head"><span>AM</span><div><b>Ahmed Mansour</b><small>Full-stack Developer</small></div><i>CV</i></div><div class="preview-skills"><span>Angular</span><span>Spring Boot</span><span>TypeScript</span></div><div class="preview-line"><i></i></div><div class="preview-line short"><i></i></div></article><article class="ai-core"><span>AI</span><b>Analyse en cours</b><div><i></i><i></i><i></i></div></article><article class="match-preview"><p>COMPATIBILITÉ</p><strong>92<small>%</small></strong><div class="landing-score-bar"><i></i></div><span>Excellent match</span></article><svg class="visual-connections" viewBox="0 0 620 430" preserveAspectRatio="none"><path d="M185 115 C280 115 250 215 326 215"/><path d="M398 215 C465 215 435 320 510 320"/></svg></div>
     </section>
 
     <section class="landing-trusted"><p>ILS FONT CONFIANCE À UNE MEILLEURE INTELLIGENCE CARRIÈRE</p><div class="landing-logo-strip"><span>Esprit</span><span>VERMEG</span><span>Ooredoo</span><span>Orange</span><span>Telnet</span><span>Sofrecom</span></div></section>
 
-    <section id="fonctionnement" class="landing-section how-section"><div class="landing-section-heading"><p>COMMENT ÇA MARCHE</p><h2>Trois étapes vers une candidature plus forte.</h2><span>Une expérience simple, de votre CV jusqu’à une analyse exploitable.</span></div><div class="landing-steps"><article><i>01</i><div class="step-icon">↑</div><h3>Importez votre CV</h3><p>Enregistrez votre profil une seule fois et réutilisez-le pour toutes les opportunités.</p></article><article><i>02</i><div class="step-icon violet">⌕</div><h3>Découvrez les offres</h3><p>Parcourez, filtrez et sauvegardez les opportunités adaptées à votre projet.</p></article><article><i>03</i><div class="step-icon cyan">✦</div><h3>Obtenez votre AI Match</h3><p>Comprenez le score, les compétences alignées et les axes d’amélioration.</p></article></div></section>
+    <section id="fonctionnement" class="landing-section how-section"><div class="landing-section-heading"><p>COMMENT ÇA MARCHE</p><h2>Trois étapes vers votre prochaine opportunité.</h2><span>Une expérience simple, de votre CV jusqu’à une analyse exploitable.</span></div><div class="landing-steps"><article><i>01</i><div class="step-icon">↑</div><h3>Enregistrez votre CV</h3><p>Ajoutez-le à votre profil une fois et réutilisez-le pour chaque analyse.</p></article><article><i>02</i><div class="step-icon violet">⌕</div><h3>Découvrez les offres</h3><p>CareerLens classe automatiquement les opportunités adaptées à votre profil.</p></article><article><i>03</i><div class="step-icon cyan">✦</div><h3>Comprenez votre AI Match</h3><p>Visualisez votre score, vos compétences alignées et les axes de progression.</p></article></div></section>
 
-    <section id="fonctionnalites" class="landing-section features-section"><div class="landing-section-heading light"><p>CAREER INTELLIGENCE</p><h2>Tout ce qu’il faut pour candidater avec confiance.</h2><span>Un produit cohérent pour analyser, progresser et suivre chaque opportunité.</span></div><div class="landing-bento"><article class="bento-large"><div class="bento-icon">AI</div><h3>Analyse CV intelligente</h3><p>Extraction des compétences, expériences et recommandations personnalisées.</p><div class="bento-metrics"><span><b>92%</b><small>Compétences</small></span><span><b>86%</b><small>Expérience</small></span><span><b>90%</b><small>Formation</small></span></div></article><article><div class="bento-icon blue">↗</div><h3>Smart Matching</h3><p>Comparez votre profil à chaque offre avec un score explicable.</p></article><article><div class="bento-icon green">✓</div><h3>Suivi des candidatures</h3><p>Visualisez instantanément chaque changement de statut.</p></article><article><div class="bento-icon violet">◎</div><h3>Skill Gap Detection</h3><p>Identifiez les compétences manquantes et les priorités d’apprentissage.</p></article><article class="bento-wide"><div><div class="bento-icon cyan">◷</div><h3>Historique et progression</h3><p>Retrouvez vos analyses et observez l’évolution de votre compatibilité.</p></div><div class="mini-chart"><i></i><i></i><i></i><i></i><i></i><i></i></div></article></div></section>
+    <section id="fonctionnalites" class="landing-section features-section"><div class="landing-section-heading light"><p>CAREER INTELLIGENCE</p><h2>Tout ce qu’il faut pour avancer avec confiance.</h2><span>Analysez, progressez et découvrez les opportunités qui vous correspondent.</span></div><div class="landing-bento"><article class="bento-large"><div class="bento-icon">AI</div><h3>Analyse CV intelligente</h3><p>Extraction des compétences, expériences et recommandations personnalisées.</p><div class="bento-metrics"><span><b>92%</b><small>Compétences</small></span><span><b>86%</b><small>Expérience</small></span><span><b>90%</b><small>Formation</small></span></div></article><article><div class="bento-icon blue">↗</div><h3>Smart Matching</h3><p>Comparez votre profil à chaque offre avec un score explicable.</p></article><article><div class="bento-icon violet">◎</div><h3>Skill Gap Detection</h3><p>Identifiez les compétences manquantes et les priorités d’apprentissage.</p></article></div></section>
 
-    <section id="entreprises" class="landing-section recruiter-section"><div><p class="landing-eyebrow">POUR LES RECRUTEURS</p><h2>Une lecture plus claire des candidatures.</h2><p>Centralisez les offres, suivez le pipeline et utilisez l’IA comme aide à la décision — jamais comme décision automatique.</p><button type="button" class="landing-primary" (click)="openAuth('login')">Accéder à l’espace recruteur <span>→</span></button></div><div class="pipeline-preview"><div class="pipeline-head"><span>Pipeline candidats</span><b>12 profils</b></div><article><span class="pipeline-avatar">SA</span><div><b>Sarra Amri</b><small>Frontend Developer</small></div><strong>94%</strong></article><article><span class="pipeline-avatar violet">MK</span><div><b>Mohamed Khalil</b><small>Java Engineer</small></div><strong>88%</strong></article><article><span class="pipeline-avatar cyan">YN</span><div><b>Yasmine Nasri</b><small>Data Analyst</small></div><strong>81%</strong></article></div></section>
 
     <section class="landing-cta"><div><p>PRÊT À COMMENCER ?</p><h2>Votre prochaine opportunité est plus proche que vous ne le pensez.</h2></div><button type="button" class="landing-primary" (click)="openAuth('register')">Commencer avec CareerLens <span>→</span></button></section>
   </main>
@@ -43,13 +42,13 @@
     <app-three-scene class="auth-three" theme="dark" variant="auth" [density]="170"></app-three-scene>
     <div class="auth-orbit auth-orbit-one"><i></i></div><div class="auth-orbit auth-orbit-two"><i></i></div><span class="auth-float-piece auth-piece-ai">AI</span><span class="auth-float-piece auth-piece-score">92% Match</span><span class="auth-float-piece auth-piece-spark">✦</span><div class="auth-particles"><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <button type="button" class="brand auth-brand auth-back" (click)="showLanding()"><span class="brand-mark">←</span><span>Career<span>Lens</span></span></button>
-    <div class="auth-message"><p class="kicker"><span>AI-powered</span> career intelligence</p><h1>Your next role<br>starts with <em>clarity.</em></h1><p>Understand your strengths, uncover skill gaps and make every application more intentional.</p></div>
+    <div class="auth-message"><p class="kicker"><span>AI-powered</span> career intelligence</p><h1>Your next role<br>starts with <em>clarity.</em></h1><p>Understand your strengths, uncover skill gaps and make every career decision more intentional.</p></div>
     <div class="auth-proof"><span>✓</span><p><b>Transparent scoring</b><small>Every result is explainable and actionable.</small></p></div>
   </div>
   <div class="auth-panel">
     <div class="auth-card">
       <div class="auth-tabs"><button type="button" [class.active]="authMode() === 'login'" (click)="switchAuthMode('login')">Sign in</button><button type="button" [class.active]="authMode() === 'register'" (click)="switchAuthMode('register')">Create account</button></div>
-      <div class="auth-heading"><h2>{{ authMode() === 'login' ? 'Welcome back' : 'Create your account' }}</h2><p>{{ authMode() === 'login' ? 'Sign in to continue to your workspace.' : 'Start building smarter career applications.' }}</p></div>
+      <div class="auth-heading"><h2>{{ authMode() === 'login' ? 'Welcome back' : 'Create your account' }}</h2><p>{{ authMode() === 'login' ? 'Sign in to continue to your workspace.' : 'Start building a smarter career profile.' }}</p></div>
       <form #authForm="ngForm" (ngSubmit)="submitAuth()" class="auth-form">
         <label *ngIf="authMode() === 'register'"><span>Full name</span><input required maxlength="100" [(ngModel)]="fullName" name="fullName" placeholder="Your full name"></label>
         <label><span>Email address</span><input required type="email" [(ngModel)]="email" name="email" placeholder="name@company.com"></label>
@@ -70,11 +69,11 @@
     <nav>
       <p class="sidebar-group sidebar-label">ADMINISTRATION</p>
       <button type="button" [class.active]="adminSection() === 'overview'" (click)="selectAdminSection('overview'); closeMobileSidebar()"><span class="sidebar-icon">⌂</span><span class="sidebar-label"><b>Vue d’ensemble</b><small>Indicateurs de la plateforme</small></span></button>
-      <button type="button" [class.active]="adminSection() === 'applications'" (click)="selectAdminSection('applications'); closeMobileSidebar()"><span class="sidebar-icon">✓</span><span class="sidebar-label"><b>Candidatures</b><small>{{ adminApplications().length }} dossier(s) reçu(s)</small></span></button>
       <button type="button" [class.active]="adminSection() === 'offers'" (click)="selectAdminSection('offers'); closeMobileSidebar()"><span class="sidebar-icon">▣</span><span class="sidebar-label"><b>Offres d’emploi</b><small>{{ adminOffers().length }} offre(s)</small></span></button>
       <button type="button" [class.active]="adminSection() === 'users'" (click)="selectAdminSection('users'); closeMobileSidebar()"><span class="sidebar-icon">◎</span><span class="sidebar-label"><b>Utilisateurs</b><small>{{ adminUsers().length }} compte(s)</small></span></button>
       <p class="sidebar-group sidebar-label">NAVIGATION</p>
-      <button type="button" (click)="showAnalyzer(); closeMobileSidebar()"><span class="sidebar-icon">←</span><span class="sidebar-label"><b>Retour à l’application</b><small>Matching et candidatures</small></span></button>
+      <button type="button" (click)="showAnalyzer(); closeMobileSidebar()"><span class="sidebar-icon">←</span><span class="sidebar-label"><b>Retour au matching</b><small>Analyse et opportunités</small></span></button>
+      <button type="button" (click)="openCodeDebugger()"><span class="sidebar-icon">⌘</span><span class="sidebar-label"><b>AI Code Debugger</b><small>Diagnostic par module</small></span></button>
     </nav>
     <div class="app-sidebar-user"><span>{{ currentUser.fullName.charAt(0).toUpperCase() }}</span><div class="sidebar-label"><b>{{ currentUser.fullName }}</b><small>{{ currentUser.email }}</small></div><button type="button" class="sidebar-label" title="Déconnexion" (click)="logout()">↗</button></div>
   </aside>
@@ -82,7 +81,7 @@
   <div class="app-workspace">
   <ng-container *ngIf="currentView() !== 'admin'; else adminTopbar"><ng-container *ngTemplateOutlet="unifiedNavbar"></ng-container></ng-container><ng-template #adminTopbar><header class="topbar admin-topbar"><div class="topbar-title"><button type="button" class="mobile-menu" (click)="mobileSidebarOpen.set(true)" aria-label="Ouvrir le menu administration">☰</button><div><span>CareerLens Administration</span><b>{{ currentViewLabel() }}</b></div></div><div class="topbar-actions"><span class="service-status"><i></i> Services opérationnels</span><div class="user-menu"><span>{{ currentUser.fullName.charAt(0).toUpperCase() }}</span><div><b>{{ currentUser.fullName }}</b><small>Administrateur</small></div><button type="button" class="navbar-logout" (click)="logout()"><span>Déconnexion</span><i>↗</i></button></div></div></header></ng-template>
 
-  <app-three-scene class="workspace-three" theme="light" [variant]="currentView()" [density]="150"></app-three-scene>
+  <app-three-scene class="workspace-three" theme="light" [variant]="sceneVariant()" [density]="150"></app-three-scene>
   <div class="workspace-ambient" aria-hidden="true">
     <span class="workspace-glow workspace-glow-blue"></span><span class="workspace-glow workspace-glow-violet"></span>
     <div class="workspace-orbit workspace-orbit-one"><i></i></div><div class="workspace-orbit workspace-orbit-two"><i></i></div><div class="workspace-orbit workspace-orbit-three"><i></i></div>
@@ -94,14 +93,14 @@
     <section *ngIf="currentView() === 'analyzer'" class="hero">
       <div class="hero-copy">
         <p class="kicker"><span>AI-powered</span> career intelligence</p>
-        <h1>See how well you<br><em>fit the role.</em></h1>
-        <p class="hero-text">Compare your experience with any job description and get a clear, explainable compatibility report in seconds.</p>
+        <h1>Find the roles that<br><em>fit your profile.</em></h1>
+        <p class="hero-text">Upload your CV once to see your compatibility report and the opportunities that match you best.</p>
         <div class="hero-points" aria-label="Analysis features">
           <span><i>01</i> Semantic analysis</span><span><i>02</i> Skill gap detection</span><span><i>03</i> Actionable insights</span>
         </div>
       </div>
       <div class="hero-visual" aria-hidden="true">
-        <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+        <app-career-visual></app-career-visual>
         <div class="visual-card card-primary"><span class="mini-label">MATCH POTENTIAL</span><strong>87<span>%</span></strong><div class="mini-bars"><i></i><i></i><i></i><i></i></div></div>
         <div class="visual-card card-float"><span class="check">✓</span><div><b>Skills aligned</b><small>12 competencies found</small></div></div>
       </div>
@@ -109,31 +108,33 @@
 
     <section *ngIf="currentView() === 'analyzer'" class="analyzer" aria-labelledby="analyzer-title">
       <div class="section-heading">
-        <div><p class="section-number">01 — ANALYZE</p><h2 id="analyzer-title">Build your compatibility report</h2></div>
-        <p>Paste your information below. Your data is used only to generate this analysis.</p>
+        <div><p class="section-number">01 — ANALYZE</p><h2 id="analyzer-title">One CV, your report and matching jobs</h2></div>
+        <p>Upload or paste your CV. CareerLens ranks active offers and explains your best match.</p>
       </div>
-      <form #analysisForm="ngForm" (ngSubmit)="analyze()" class="analysis-form">
+      <form #analysisForm="ngForm" (ngSubmit)="runCareerAnalysis()" class="analysis-form">
         <label class="input-card">
           <span class="input-heading"><span class="input-icon">CV</span><span><b>Your profile</b><small>Resume or professional summary</small></span></span>
-          <span class="upload-row"><input #cvFile hidden type="file" accept=".pdf,.docx,.txt" (change)="uploadDocument($event, 'cv')"><button type="button" (click)="cvFile.click()" [disabled]="uploadingCv()"><span>{{ uploadingCv() ? '…' : '↑' }}</span>{{ uploadingCv() ? 'Extracting text…' : 'Upload CV' }}</button><small *ngIf="cvFilename()">✓ {{ cvFilename() }}</small><small *ngIf="!cvFilename()">PDF, DOCX or TXT · max 10 MB</small></span>
-          <textarea required [(ngModel)]="cvText" name="cvText" placeholder="Paste your CV, skills and experience here..."></textarea>
+          <span class="upload-row"><input #cvFile hidden type="file" accept=".pdf,.docx,.txt" (change)="uploadDocument($event, 'cv')"><button type="button" (click)="cvFile.click()" [disabled]="uploadingCv() || matchingJobsLoading()"><span>{{ uploadingCv() ? '…' : '↑' }}</span>{{ uploadingCv() ? 'Extracting text…' : 'Upload CV' }}</button><button *ngIf="user() && user()?.role !== 'ADMIN'" type="button" class="use-profile-cv" (click)="useSavedCv()" [disabled]="profileLoading() || matchingJobsLoading()">{{ profileLoading() ? 'Loading profile…' : 'Use my CV' }}</button><small *ngIf="cvFilename()">✓ {{ cvFilename() }}</small><small *ngIf="!cvFilename()">PDF, DOCX or TXT · max 10 MB</small></span>
+          <textarea required [(ngModel)]="cvText" (ngModelChange)="resetJobMatches()" [readonly]="matchingJobsLoading()" name="cvText" placeholder="Paste your CV, skills and experience here..."></textarea>
           <span class="input-footer"><span>Plain text</span><span>{{ cvText.length }} characters</span></span>
         </label>
-        <label class="input-card">
-          <span class="input-heading"><span class="input-icon role-icon">JD</span><span><b>Target role</b><small>The opportunity you are applying for</small></span></span>
-          <span class="upload-row"><input #jobFile hidden type="file" accept=".pdf,.docx,.txt" (change)="uploadDocument($event, 'job')"><button type="button" (click)="jobFile.click()" [disabled]="uploadingJob()"><span>{{ uploadingJob() ? '…' : '↑' }}</span>{{ uploadingJob() ? 'Extracting text…' : 'Upload job offer' }}</button><small *ngIf="jobFilename()">✓ {{ jobFilename() }}</small><small *ngIf="!jobFilename()">PDF, DOCX or TXT · max 10 MB</small></span>
-          <textarea required [(ngModel)]="jobDescription" name="jobDescription" placeholder="Paste the job description here..."></textarea>
-          <span class="input-footer"><span>Job requirements</span><span>{{ jobDescription.length }} characters</span></span>
-        </label>
         <div class="form-action">
-          <button type="submit" [disabled]="loading() || analysisForm.invalid">
-            <span *ngIf="loading()" class="button-spinner" aria-hidden="true"></span>
-            <svg *ngIf="!loading()" viewBox="0 0 24 24" aria-hidden="true"><path d="m13 5 7 7-7 7M4 12h16"/></svg>
-            {{ loading() ? 'Analyzing your profile…' : 'Generate my report' }}
+          <button type="submit" [disabled]="loading() || matchingJobsLoading() || analysisForm.invalid">
+            <span *ngIf="loading() || matchingJobsLoading()" class="button-spinner" aria-hidden="true"></span>
+            <svg *ngIf="!loading() && !matchingJobsLoading()" viewBox="0 0 24 24" aria-hidden="true"><path d="m13 5 7 7-7 7M4 12h16"/></svg>
+            {{ matchingJobsLoading() ? 'Finding your best opportunities…' : loading() ? 'Generating your report…' : 'Analyze my CV & find matching jobs' }}
           </button>
-          <p><span class="shield">✓</span> Explainable and deterministic scoring</p>
+          <p><span class="shield">✓</span> One analysis gives you a personalized report and ranked job opportunities.</p>
         </div>
       </form>
+    </section>
+
+    <section *ngIf="currentView() === 'analyzer' && (jobMatches().length || matchingJobsLoading() || matchingJobsError() || matchingJobsSearched())" class="matching-results" aria-live="polite">
+      <div class="matching-results-heading"><div><p class="section-number">CAREERLENS MATCH</p><h2>Opportunities for your profile</h2><p *ngIf="matchingJobsTotal()">Ranked against {{ matchingJobsTotal() }} published offers using skills and semantic similarity.</p></div><button type="button" class="secondary-button" (click)="openJobs()">Browse all offers →</button></div>
+      <div *ngIf="matchingJobsLoading()" class="matching-progress"><span class="button-spinner"></span> Analyzing your CV against the published roles…</div>
+      <div *ngIf="matchingJobsError()" class="error-message" role="alert"><span>!</span><div><b>Matching could not be completed</b><p>{{ matchingJobsError() }}</p></div></div>
+      <div *ngIf="jobMatches().length" class="matching-job-grid"><article *ngFor="let match of jobMatches() | slice:0:12" class="matching-job-card"><div class="matching-job-top"><span>{{ getOfferCategory(match.offer) }}</span><b>{{ score(match.compatibility_score) }}% match</b></div><h3>{{ match.offer.title }}</h3><p>{{ match.offer.company }} · {{ match.offer.location }}</p><div class="matching-job-skills"><span *ngFor="let skill of match.matching_skills | slice:0:4">✓ {{ skill.job_skill }}</span><i *ngIf="!match.matching_skills.length">Review the role requirements</i></div><div class="matching-job-actions"><button type="button" (click)="openMatchedOffer(match.offer)">View offer</button><button type="button" (click)="practiceMatchedOffer(match.offer)">Practice interview</button></div></article></div>
+      <div *ngIf="!matchingJobsLoading() && !matchingJobsError() && !jobMatches().length && matchingJobsTotal() === 0" class="admin-offer-empty">No published offers are available yet.</div>
     </section>
 
     <section *ngIf="(currentView() === 'analyzer' || currentView() === 'jobs') && loading()" class="processing" aria-live="polite">
@@ -144,6 +145,7 @@
 
     <section *ngIf="currentView() === 'jobs'" class="jobs-page">
       <div class="jobs-heading">
+        <app-career-visual class="ambient-scene" variant="ambient"></app-career-visual>
         <div><p class="section-number">OPEN OPPORTUNITIES</p><h1>{{ selectedOffer() ? selectedOffer()?.title : 'Find your next opportunity' }}</h1><p>{{ selectedOffer() ? selectedOffer()?.company + ' · ' + selectedOffer()?.location : 'Explore available roles and instantly compare your CV with the requirements.' }}</p></div>
         <button *ngIf="selectedOffer()" type="button" class="secondary-button" (click)="closeOffer()">← All offers</button>
       </div>
@@ -151,17 +153,26 @@
       <div *ngIf="offersLoading()" class="admin-loading"><span class="button-spinner"></span> Loading job offers…</div>
 
       <ng-container *ngIf="!offersLoading() && !selectedOffer()">
-        <div class="job-filters"><label><span>⌕</span><input [(ngModel)]="jobSearch" placeholder="Search title, company, technology or location…"></label><select [(ngModel)]="jobType"><option value="">All contract types</option><option>CDI</option><option>CDD</option><option>Internship</option><option>Freelance</option><option>Part-time</option><option>Full-time</option></select><button type="button" class="favorites-filter" [class.active]="favoritesOnly()" (click)="favoritesOnly.set(!favoritesOnly())">★ Favorites</button><span>{{ filteredJobOffers().length }} results</span></div>
-        <div *ngIf="!filteredJobOffers().length" class="empty-jobs"><span>◎</span><h2>No matching offers</h2><p>Try changing your search or contract filter.</p></div>
-        <div *ngIf="filteredJobOffers().length" class="job-grid">
-          <article *ngFor="let offer of filteredJobOffers()" class="job-card">
+        <div *ngIf="!jobOffers().length" class="empty-jobs"><span>◎</span><h2>No job offers yet</h2><p>The administrator has not published an opportunity yet.</p></div>
+        <ng-container *ngIf="jobOffers().length">
+          <div class="job-catalog-toolbar">
+            <label><span>Search offers</span><input type="search" [value]="jobSearch()" (input)="setJobSearch(($any($event.target)).value)" placeholder="Title, company, skill or location"></label>
+            <label><span>Domain</span><select [value]="jobCategory()" (change)="setJobCategory(($any($event.target)).value)"><option *ngFor="let category of jobCategories()">{{ category }}</option></select></label>
+            <p>{{ filteredJobOffers().length }} opportunities</p>
+          </div>
+          <div *ngIf="displayedJobOffers().length" class="job-grid">
+          <article *ngFor="let offer of displayedJobOffers()" class="job-card">
             <div class="job-card-top"><span>{{ offer.company.charAt(0).toUpperCase() }}</span><div><small>{{ offer.createdAt | date:'mediumDate' }}</small><button type="button" class="favorite-button" [class.active]="isFavorite(offer.id)" (click)="toggleFavorite(offer, $event)" [attr.aria-label]="isFavorite(offer.id) ? 'Remove from favorites' : 'Add to favorites'">{{ isFavorite(offer.id) ? '★' : '☆' }}</button></div></div>
             <h2>{{ offer.title }}</h2><p class="job-company">{{ offer.company }}</p>
             <div class="job-meta"><span>⌖ {{ offer.location }}</span><span>{{ offer.employmentType }}</span></div>
-            <p class="job-excerpt">{{ offer.description }}</p>
+            <p class="job-excerpt">{{ getOfferExcerpt(offer) }}</p>
             <button type="button" class="view-offer-button" (click)="selectOffer(offer)">View offer & match CV <span>→</span></button>
+            <span class="job-domain-tag">{{ getOfferCategory(offer) }}</span>
           </article>
         </div>
+          <div *ngIf="!displayedJobOffers().length" class="admin-offer-empty">No offers match those filters. Try another search or domain.</div>
+          <nav *ngIf="filteredJobOffers().length" class="job-pagination" aria-label="Job offer pages"><button type="button" (click)="changeJobPage(-1)" [disabled]="jobPage() === 0">← Previous</button><span>Page {{ jobPage() + 1 }} of {{ jobPageCount() }}</span><button type="button" (click)="changeJobPage(1)" [disabled]="jobPage() + 1 >= jobPageCount()">Next →</button></nav>
+        </ng-container>
       </ng-container>
 
       <div *ngIf="selectedOffer() as offer" class="job-match-layout">
@@ -178,13 +189,12 @@
           <button class="match-upload" type="button" (click)="matchCv.click()" [disabled]="uploadingCv()"><span>{{ uploadingCv() ? '…' : '↑' }}</span><div><b>{{ uploadingCv() ? 'Extracting your CV…' : 'Upload your CV' }}</b><small>{{ cvFilename() || 'PDF, DOCX or TXT · max 10 MB' }}</small></div></button>
           <textarea required [(ngModel)]="cvText" name="offerCvText" placeholder="Your extracted CV text will appear here…"></textarea>
           <button class="match-submit" type="submit" [disabled]="loading() || !cvText.trim()"><span *ngIf="loading()" class="button-spinner"></span>{{ loading() ? 'Calculating match…' : 'See my matching result' }}</button>
-          <div class="application-box"><p class="section-number">READY TO APPLY?</p><textarea [(ngModel)]="coverLetter" name="coverLetter" maxlength="10000" placeholder="Optional short cover letter…"></textarea><p *ngIf="applicationMessage()" class="profile-success">✓ {{ applicationMessage() }}</p><button type="button" class="application-submit" (click)="applyToSelectedOffer()" [disabled]="applicationSaving()"><span *ngIf="applicationSaving()" class="button-spinner"></span>{{ applicationSaving() ? 'Submitting…' : 'Apply with my saved CV' }}</button><small>Your saved profile CV is attached to this application.</small></div>
         </form>
       </div>
     </section>
 
     <section *ngIf="currentView() === 'interviews'" class="interview-page">
-      <div class="jobs-heading"><div><p class="section-number">PERSONALIZED PRACTICE</p><h1>Interview simulator</h1><p>Practice questions grounded in your CV and a published role, one answer at a time.</p></div><button *ngIf="interviewSession()" type="button" class="secondary-button" (click)="interviewSession.set(null)">New simulation</button></div>
+      <div class="jobs-heading"><app-career-visual class="ambient-scene" variant="ambient"></app-career-visual><div><p class="section-number">PERSONALIZED PRACTICE</p><h1>Interview simulator</h1><p>Practice questions grounded in your CV and a published role, one answer at a time.</p></div><button *ngIf="interviewSession()" type="button" class="secondary-button" (click)="interviewSession.set(null)">New simulation</button></div>
       <p *ngIf="interviewError()" class="offer-form-error" role="alert">{{ interviewError() }}</p>
       <div *ngIf="!interviewSession()" class="interview-start">
         <form class="job-match-card" (ngSubmit)="startInterview()">
@@ -203,18 +213,9 @@
         <div *ngIf="interview.evaluations.length" class="interview-feedback"><h3>Feedback on your previous answer</h3><article><div class="model-top"><span>Answer score</span><b>{{ interview.evaluations[interview.evaluations.length - 1].score }}/100</b></div><p>{{ interview.evaluations[interview.evaluations.length - 1].feedback }}</p><ul><li *ngFor="let item of interview.evaluations[interview.evaluations.length - 1].strengths">✓ {{ item }}</li><li *ngFor="let item of interview.evaluations[interview.evaluations.length - 1].improvements">↗ {{ item }}</li></ul></article></div>
         <div *ngIf="interview.completed && interview.summary as summary" class="interview-summary"><div class="interview-final-score"><strong>{{ summary.score }}</strong><span>/100<br>OVERALL</span></div><div class="interview-summary-grid"><article class="insight-card strengths"><h3>Strengths</h3><ul><li *ngFor="let item of summary.strengths">{{ item }}</li></ul></article><article class="insight-card gaps"><h3>Areas to improve</h3><ul><li *ngFor="let item of summary.weaknesses">{{ item }}</li></ul></article><article class="insight-card agent-note"><h3>Recommendations</h3><ul><li *ngFor="let item of summary.recommendations">{{ item }}</li></ul></article></div></div>
       </article>
-      <section class="interview-history"><div class="users-card-head"><div><h2>Simulation history</h2><p>Continue an unfinished session or review a completed interview.</p></div><span>{{ interviewSessions().length }} sessions</span></div><div *ngIf="!interviewSessions().length" class="admin-offer-empty">Your saved simulations will appear here.</div><button *ngFor="let session of interviewSessions()" class="interview-history-row" type="button" (click)="viewInterview(session)"><span><b>{{ session.offerTitle }}</b><small>{{ session.company }} · {{ session.createdAt | date:'medium' }}</small></span><span class="interview-history-status">{{ session.completed ? 'Completed · ' + session.summary?.score + '/100' : session.currentQuestion + '/' + session.questions.length + ' answered' }} →</span></button></section>
     </section>
 
     <div *ngIf="error()" class="error-message" role="alert"><span>!</span><div><b>We couldn't complete the analysis</b><p>{{ error() }}</p></div></div>
-    <section *ngIf="currentView() === 'applications'" class="applications-page">
-      <div class="jobs-heading"><div><p class="section-number">MES CANDIDATURES</p><h1>Suivez vos candidatures</h1><p>Les changements effectués par l’administrateur apparaissent automatiquement sur cette page.</p></div><div class="applications-heading-actions"><span class="admin-badge">{{ applications().length }} candidature(s)</span><button type="button" class="secondary-button" (click)="refreshApplications()" [disabled]="applicationsRefreshing()"><span [class.button-spinner]="applicationsRefreshing()">{{ applicationsRefreshing() ? '' : '↻' }}</span> Actualiser</button></div></div>
-      <div *ngIf="applicationsLoading()" class="admin-loading"><span class="button-spinner"></span> Loading applications…</div>
-      <div *ngIf="!applicationsLoading() && !applications().length" class="empty-jobs"><span>✦</span><h2>No applications yet</h2><p>Open a job offer and apply using your saved CV.</p></div>
-      <p *ngIf="applicationsLastRefresh()" class="applications-refresh-note">Mise à jour automatique · dernière vérification à {{ applicationsLastRefresh() | date:'HH:mm:ss' }}</p>
-      <div *ngIf="!applicationsLoading() && applications().length" class="application-grid"><article *ngFor="let application of applications()" [attr.data-status]="application.status"><div class="application-card-top"><span class="application-company">{{ application.company.charAt(0).toUpperCase() }}</span><span class="application-status" [attr.data-status]="application.status">{{ applicationStatusLabel(application.status) }}</span></div><h2>{{ application.jobTitle }}</h2><p>{{ application.company }} · {{ application.location }}</p><div class="candidate-status-message" [attr.data-status]="application.status"><span>{{ applicationStatusIcon(application.status) }}</span><div><b>{{ applicationStatusLabel(application.status) }}</b><p>{{ applicationStatusMessage(application.status) }}</p></div></div><div class="application-timeline"><i></i><span>Envoyée le {{ application.createdAt | date:'mediumDate' }}</span><span>Mise à jour le {{ application.updatedAt | date:'short' }}</span></div><blockquote *ngIf="application.coverLetter">{{ application.coverLetter }}</blockquote><button *ngIf="application.status !== 'WITHDRAWN' && application.status !== 'ACCEPTED' && application.status !== 'REJECTED'" type="button" (click)="withdrawApplication(application)">Retirer la candidature</button></article></div>
-    </section>
-
     <section *ngIf="currentView() === 'profile'" class="profile-page">
       <div class="jobs-heading"><div><p class="section-number">CANDIDATE PROFILE</p><h1>Your professional profile</h1><p>Save your CV once and reuse it when matching any published opportunity.</p></div><span class="admin-badge">Private workspace</span></div>
       <div *ngIf="profileLoading()" class="admin-loading"><span class="button-spinner"></span> Loading profile…</div>
@@ -224,18 +225,27 @@
       </form>
     </section>
 
-    <section *ngIf="currentView() === 'history'" class="history-page">
-      <div class="jobs-heading"><div><p class="section-number">MATCHING HISTORY</p><h1>Your analysis journey</h1><p>Review every compatibility score and follow your progress over time.</p></div><span class="admin-badge">{{ history().length }} analyses</span></div>
-      <div *ngIf="historyLoading()" class="admin-loading"><span class="button-spinner"></span> Loading history…</div>
-      <div *ngIf="!historyLoading() && !history().length" class="empty-jobs"><span>↗</span><h2>No analysis yet</h2><p>Select an offer and match your CV to create your first result.</p></div>
-      <div *ngIf="!historyLoading() && history().length" class="history-list"><article *ngFor="let item of history()"><div class="history-score" [class.strong]="item.compatibilityScore >= .7">{{ score(item.compatibilityScore) }}%</div><div><h2>{{ item.jobTitle }}</h2><p>{{ item.company }}</p><small>{{ item.createdAt | date:'medium' }}</small></div><div class="history-bar"><i [style.width.%]="score(item.compatibilityScore)"></i></div></article></div>
+    <section *ngIf="currentView() === 'debug'" class="code-debug-page">
+      <div class="jobs-heading"><div><p class="section-number">AI-ASSISTED CODE REVIEW</p><h1>Debug with context</h1><p>Choisissez un module pour appliquer son type de diagnostic dédié. Votre code reste dans votre instance et n’est jamais exécuté.</p></div><span class="admin-badge">Local analysis</span></div>
+      <form class="code-debug-form" (ngSubmit)="analyzeCode()">
+        <div class="code-debug-fields">
+          <label><span>Module CareerLens</span><select [value]="debugModule()" (change)="debugModule.set(($any($event.target)).value)"><option value="matching">CV matching · Logical bugs</option><option value="offers">Job offers · Runtime bugs</option><option value="interviews">Interview practice · Syntax bugs</option><option value="profile">Candidate profile · Security bugs</option></select></label>
+          <label><span>Language</span><select [value]="debugLanguage()" (change)="debugLanguage.set(($any($event.target)).value)"><option value="python">Python</option><option value="java">Java</option><option value="javascript">JavaScript</option><option value="typescript">TypeScript</option></select></label>
+        </div>
+        <label class="code-debug-editor"><span>Code snippet <small>{{ debugCode().length }}/20,000</small></span><textarea required maxlength="20000" [value]="debugCode()" (input)="debugCode.set(($any($event.target)).value)" placeholder="Collez ici le code à examiner…"></textarea></label>
+        <label class="code-debug-expected"><span>Comportement attendu (facultatif)</span><textarea maxlength="2000" [value]="debugExpectedBehavior()" (input)="debugExpectedBehavior.set(($any($event.target)).value)" placeholder="Ex. Le score doit rester compris entre 0 et 100, même si le CV ne contient aucune compétence."></textarea></label>
+        <button class="match-submit" type="submit" [disabled]="debugLoading() || !debugCode().trim()"><span *ngIf="debugLoading()" class="button-spinner"></span>{{ debugLoading() ? 'Analyzing code…' : 'Analyze this code' }}</button>
+      </form>
+      <div *ngIf="debugError()" class="error-message" role="alert"><span>!</span><div><b>Analysis failed</b><p>{{ debugError() }}</p></div></div>
+      <section *ngIf="debugResult() as result" class="code-debug-results" aria-live="polite"><div class="users-card-head"><div><p class="section-number">{{ result.module_label }} · {{ result.bug_type }} bug focus</p><h2>Diagnostic results</h2><p>{{ result.summary }}</p></div><span class="admin-badge">{{ result.findings.length }} finding(s)</span></div><div *ngFor="let finding of result.findings" class="code-debug-finding"><div><span class="debug-severity" [attr.data-severity]="finding.severity">{{ finding.severity }}</span><span>Line {{ finding.line }} · {{ finding.bug_type }}</span></div><h3>{{ finding.message }}</h3><p>{{ finding.recommendation }}</p></div><p class="code-debug-note">Local static rules only. No code execution, LLM-generated patch, or external transmission. Review suggestions and validate changes with tests.</p></section>
     </section>
 
     <div *ngIf="error()" class="error-message" role="alert"><span>!</span><div><b>Une erreur est survenue</b><p>{{ error() }}</p></div></div>
 
     <section *ngIf="visibleResult() as analysisResult" class="report" aria-labelledby="report-title">
       <div class="section-heading report-heading">
-        <div><p class="section-number">02 — YOUR REPORT</p><h2 id="report-title">Compatibility overview</h2></div>
+        <app-career-visual class="report-scene" variant="report"></app-career-visual>
+        <div><p class="section-number">02 — YOUR REPORT</p><h2 id="report-title">Compatibility with {{ selectedOffer()?.title || 'your best match' }}</h2></div>
         <span class="report-id">Analysis complete <i>✓</i></span>
       </div>
       <div class="report-summary">
@@ -275,27 +285,24 @@
         <div class="admin-sidebar-brand"><span>CL</span><div><b>CareerLens</b><small>Administration</small></div></div>
         <nav aria-label="Navigation administration">
           <button type="button" [class.active]="adminSection() === 'overview'" (click)="selectAdminSection('overview')"><span>⌂</span><div><b>Vue d’ensemble</b><small>Statistiques générales</small></div></button>
-          <button type="button" [class.active]="adminSection() === 'applications'" (click)="selectAdminSection('applications')"><span>✓</span><div><b>Candidatures</b><small>{{ adminApplications().length }} reçue(s)</small></div></button>
           <button type="button" [class.active]="adminSection() === 'offers'" (click)="selectAdminSection('offers')"><span>▣</span><div><b>Offres d’emploi</b><small>{{ adminOffers().length }} offre(s)</small></div></button>
           <button type="button" [class.active]="adminSection() === 'users'" (click)="selectAdminSection('users')"><span>◎</span><div><b>Utilisateurs</b><small>{{ adminUsers().length }} compte(s)</small></div></button>
         </nav>
         <div class="admin-sidebar-user"><span>{{ user()?.fullName?.charAt(0)?.toUpperCase() }}</span><div><b>{{ user()?.fullName }}</b><small>{{ user()?.email }}</small></div></div>
       </aside>
       <div class="admin-main">
-      <div class="admin-hero"><div><p class="section-number">ADMINISTRATION</p><h1>{{ adminSection() === 'overview' ? 'Vue d’ensemble' : adminSection() === 'applications' ? 'Candidatures' : adminSection() === 'offers' ? 'Offres d’emploi' : 'Utilisateurs' }}</h1><p>Gérez la plateforme CareerLens depuis votre espace sécurisé.</p></div><span class="admin-badge">Espace protégé</span></div>
+      <div class="admin-hero"><div><p class="section-number">ADMINISTRATION</p><h1>{{ adminSection() === 'overview' ? 'Vue d’ensemble' : adminSection() === 'offers' ? 'Offres d’emploi' : 'Utilisateurs' }}</h1><p>Gérez la plateforme CareerLens depuis votre espace sécurisé.</p></div><span class="admin-badge">Espace protégé</span></div>
       <div *ngIf="adminLoading()" class="admin-loading"><span class="button-spinner"></span> Loading dashboard…</div>
       <ng-container *ngIf="!adminLoading()">
-        <div *ngIf="adminSection() === 'overview'" class="stat-grid"><article><span>Utilisateurs inscrits</span><strong>{{ adminStats()?.users || 0 }}</strong><small>Comptes au total</small></article><article><span>Offres d’emploi</span><strong>{{ adminStats()?.jobOffers || 0 }}</strong><small>Opportunités créées</small></article><article><span>Candidatures</span><strong>{{ adminStats()?.applications || 0 }}</strong><small>Dossiers envoyés</small></article><article><span>Analyses IA</span><strong>{{ adminStats()?.analyses || 0 }}</strong><small>Rapports générés</small></article></div>
+        <div *ngIf="adminSection() === 'overview'" class="stat-grid"><article><span>Utilisateurs inscrits</span><strong>{{ adminStats()?.users || 0 }}</strong><small>Comptes au total</small></article><article><span>Offres d’emploi</span><strong>{{ adminStats()?.jobOffers || 0 }}</strong><small>Opportunités créées</small></article><article><span>Simulations d’entretien</span><strong>{{ adminInterviews().length }}</strong><small>Sessions enregistrées</small></article><article><span>Analyses IA</span><strong>{{ adminStats()?.analyses || 0 }}</strong><small>Rapports générés</small></article></div>
 
         <div *ngIf="adminSection() === 'overview'" class="dashboard-charts">
-          <article class="chart-card applications-chart"><div class="chart-heading"><div><p class="section-number">RECRUTEMENT</p><h2>Statut des candidatures</h2></div><span>Temps réel</span></div><div class="donut-layout"><div class="donut-chart" [style.background]="applicationChartGradient()"><div><strong>{{ adminApplications().length }}</strong><small>Total</small></div></div><div class="chart-legend"><div *ngFor="let item of applicationChartData()"><i [style.background]="item.color"></i><span>{{ item.label }}</span><b>{{ item.count }}</b></div></div></div></article>
-          <article class="chart-card activity-chart"><div class="chart-heading"><div><p class="section-number">ACTIVITÉ</p><h2>Vue globale</h2></div><span>Données actuelles</span></div><div class="vertical-chart"><div><span class="chart-bar" [style.height.%]="metricBarHeight(adminStats()?.users || 0)"><i>{{ adminStats()?.users || 0 }}</i></span><small>Utilisateurs</small></div><div><span class="chart-bar violet" [style.height.%]="metricBarHeight(adminStats()?.jobOffers || 0)"><i>{{ adminStats()?.jobOffers || 0 }}</i></span><small>Offres</small></div><div><span class="chart-bar green" [style.height.%]="metricBarHeight(adminStats()?.applications || 0)"><i>{{ adminStats()?.applications || 0 }}</i></span><small>Candidatures</small></div><div><span class="chart-bar orange" [style.height.%]="metricBarHeight(adminStats()?.analyses || 0)"><i>{{ adminStats()?.analyses || 0 }}</i></span><small>Analyses IA</small></div></div></article>
+          <article class="chart-card activity-chart"><div class="chart-heading"><div><p class="section-number">ACTIVITÉ</p><h2>Vue globale</h2></div><span>Données actuelles</span></div><div class="vertical-chart"><div><span class="chart-bar" [style.height.%]="metricBarHeight(adminStats()?.users || 0)"><i>{{ adminStats()?.users || 0 }}</i></span><small>Utilisateurs</small></div><div><span class="chart-bar violet" [style.height.%]="metricBarHeight(adminStats()?.jobOffers || 0)"><i>{{ adminStats()?.jobOffers || 0 }}</i></span><small>Offres</small></div><div><span class="chart-bar green" [style.height.%]="metricBarHeight(adminInterviews().length)"><i>{{ adminInterviews().length }}</i></span><small>Entretiens</small></div><div><span class="chart-bar orange" [style.height.%]="metricBarHeight(adminStats()?.analyses || 0)"><i>{{ adminStats()?.analyses || 0 }}</i></span><small>Analyses IA</small></div></div></article>
           <article class="chart-card offers-chart"><div class="chart-heading"><div><p class="section-number">PUBLICATION</p><h2>État des offres</h2></div><span>{{ adminOffers().length }} au total</span></div><div class="offer-chart-total"><strong>{{ activeOfferCount() }}</strong><span>offre(s) actuellement visible(s)</span></div><div class="horizontal-metric"><div><span>Publiées</span><b>{{ activeOfferCount() }}</b></div><i><em [style.width.%]="adminOffers().length ? (activeOfferCount() / adminOffers().length) * 100 : 0"></em></i></div><div class="horizontal-metric archived"><div><span>Archivées</span><b>{{ archivedOfferCount() }}</b></div><i><em [style.width.%]="adminOffers().length ? (archivedOfferCount() / adminOffers().length) * 100 : 0"></em></i></div></article>
         </div>
 
-        <div *ngIf="adminSection() === 'overview'" class="admin-overview-actions"><button type="button" (click)="selectAdminSection('applications')"><span>✓</span><div><b>Gérer les candidatures</b><small>Consulter et modifier leur statut</small></div><i>→</i></button><button type="button" (click)="selectAdminSection('offers')"><span>▣</span><div><b>Gérer les offres</b><small>Créer, publier ou archiver</small></div><i>→</i></button><button type="button" (click)="selectAdminSection('users')"><span>◎</span><div><b>Voir les utilisateurs</b><small>Consulter les comptes inscrits</small></div><i>→</i></button></div>
+        <div *ngIf="adminSection() === 'overview'" class="admin-overview-actions"><button type="button" (click)="selectAdminSection('offers')"><span>▣</span><div><b>Gérer les offres</b><small>Créer, publier ou archiver</small></div><i>→</i></button><button type="button" (click)="selectAdminSection('users')"><span>◎</span><div><b>Voir les utilisateurs</b><small>Consulter les comptes inscrits</small></div><i>→</i></button></div>
 
-        <div *ngIf="adminSection() === 'applications'" class="users-card admin-applications"><div class="users-card-head"><div><h2>Candidatures reçues</h2><p>Consultez les candidats et modifiez leur statut de recrutement.</p></div><span>{{ adminApplications().length }} candidature(s)</span></div><p *ngIf="adminApplicationMessage()" class="admin-status-success">✓ {{ adminApplicationMessage() }}</p><div class="table-wrap"><table><thead><tr><th>Candidat</th><th>Offre</th><th>Date</th><th>Statut</th></tr></thead><tbody><tr *ngFor="let application of adminApplications()"><td><span class="table-avatar">{{ application.candidateName.charAt(0).toUpperCase() }}</span><div><b>{{ application.candidateName }}</b><small>{{ application.candidateEmail }}</small></div></td><td><b>{{ application.jobTitle }}</b><small>{{ application.company }}</small></td><td>{{ application.createdAt | date:'mediumDate' }}</td><td><select class="status-select" [ngModel]="application.status" (ngModelChange)="updateApplicationStatus(application, $event)" [ngModelOptions]="{standalone:true}" [disabled]="applicationStatusUpdatingId() === application.id"><option value="SENT">Envoyée</option><option value="REVIEWED">Consultée</option><option value="INTERVIEW">Entretien</option><option value="ACCEPTED">Acceptée</option><option value="REJECTED">Refusée</option><option value="WITHDRAWN">Retirée</option></select><small *ngIf="applicationStatusUpdatingId() === application.id" class="status-updating">Enregistrement…</small></td></tr></tbody></table></div></div>
 
         <div *ngIf="adminSection() === 'offers'" class="admin-offers-section">
           <div class="users-card-head"><div><h2>Job offer management</h2><p>Create, edit and remove opportunities visible to users.</p></div><span>{{ adminOffers().length }} offers</span></div>
@@ -311,10 +318,11 @@
             </form>
             <div class="admin-offer-list">
               <div *ngIf="!adminOffers().length" class="admin-offer-empty">No offers created yet.</div>
-              <article *ngFor="let offer of adminOffers()">
+              <article *ngFor="let offer of displayedAdminOffers()">
                 <div class="admin-offer-info"><span>{{ offer.company.charAt(0).toUpperCase() }}</span><div><h3>{{ offer.title }} <em class="publication-pill" [class.archived]="!offer.active">{{ offer.active ? 'Published' : 'Archived' }}</em></h3><p>{{ offer.company }} · {{ offer.location }} · {{ offer.employmentType }}</p><small>Created {{ offer.createdAt | date:'mediumDate' }}</small></div></div>
                 <div class="admin-offer-actions"><button type="button" (click)="editOffer(offer)">Edit</button><button type="button" class="archive" (click)="toggleOfferActive(offer)">{{ offer.active ? 'Archive' : 'Publish' }}</button><button type="button" class="delete" (click)="deleteOffer(offer)">Delete</button></div>
               </article>
+              <nav *ngIf="adminOffers().length" class="admin-offer-pagination" aria-label="Managed offer pages"><button type="button" (click)="changeAdminOfferPage(-1)" [disabled]="adminOfferPage() === 0">← Previous</button><span>Page {{ adminOfferPage() + 1 }} of {{ adminOfferPageCount() }}</span><button type="button" (click)="changeAdminOfferPage(1)" [disabled]="adminOfferPage() + 1 >= adminOfferPageCount()">Next →</button></nav>
             </div>
           </div>
         </div>
