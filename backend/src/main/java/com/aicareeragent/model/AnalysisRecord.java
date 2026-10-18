@@ -41,6 +41,7 @@ public class AnalysisRecord {
     }
 
     public Long getId() { return id; }
+    public UserAccount getUser() { return user; }
     public JobOffer getJobOffer() { return jobOffer; }
     public double getCompatibilityScore() { return compatibilityScore; }
     public Instant getCreatedAt() { return createdAt; }

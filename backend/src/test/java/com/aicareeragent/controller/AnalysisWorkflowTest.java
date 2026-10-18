@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.aicareeragent.dto.AnalysisRequest;
+import com.aicareeragent.model.AnalysisRecord;
 import com.aicareeragent.model.JobOffer;
 import com.aicareeragent.model.Role;
 import com.aicareeragent.model.UserAccount;
@@ -32,6 +33,13 @@ class AnalysisWorkflowTest {
         doReturn(Map.of("result", Map.of("compatibility_score", .87))).when(ai).analyze(request);
         when(users.findByEmailIgnoreCase("candidate@example.test")).thenReturn(Optional.of(owner));
         when(offers.findById(4L)).thenReturn(Optional.of(offer));
+        when(analyses.save(any(AnalysisRecord.class))).thenAnswer(invocation -> {
+            AnalysisRecord saved = invocation.getArgument(0);
+            java.lang.reflect.Field field = AnalysisRecord.class.getDeclaredField("id");
+            field.setAccessible(true);
+            field.set(saved, 12L);
+            return saved;
+        });
         AnalysisController controller = new AnalysisController(ai, users, analyses, offers);
 
         var response = controller.analyze(request, auth);
