@@ -33,13 +33,19 @@ public class AnalysisController {
     }
 
     @PostMapping
-    public ResponseEntity<Map<?, ?>> analyze(@Valid @RequestBody AnalysisRequest request, Authentication authentication) {
-        Map<?, ?> response = aiServiceClient.analyze(request);
-        Object result = response.get("result");
+    public ResponseEntity<Map<String, Object>> analyze(@Valid @RequestBody AnalysisRequest request, Authentication authentication) {
+        Map<?, ?> rawResponse = aiServiceClient.analyze(request);
+        Map<String, Object> response = new java.util.LinkedHashMap<>();
+        rawResponse.forEach((key, value) -> response.put(String.valueOf(key), value));
+
+        Object result = rawResponse.get("result");
         if (result instanceof Map<?, ?> resultMap && resultMap.get("compatibility_score") instanceof Number score) {
             users.findByEmailIgnoreCase(authentication.getName()).ifPresent(user -> {
                 var offer = request.job_offer_id() == null ? null : offers.findById(request.job_offer_id()).orElse(null);
-                analyses.save(new AnalysisRecord(user, offer, score.doubleValue()));
+                AnalysisRecord record = analyses.save(new AnalysisRecord(user, offer, score.doubleValue()));
+                if (record != null && record.getId() != null) {
+                    response.put("analysis_id", record.getId());
+                }
             });
         }
         return ResponseEntity.ok(response);

@@ -6,6 +6,7 @@ import com.aicareeragent.model.JobOffer;
 import com.aicareeragent.repository.JobOfferRepository;
 import com.aicareeragent.repository.JobApplicationRepository;
 import com.aicareeragent.repository.FavoriteOfferRepository;
+import com.aicareeragent.repository.ApplicationKitRepository;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -27,8 +28,15 @@ public class AdminJobOfferController {
     private final JobOfferRepository offers;
     private final JobApplicationRepository applications;
     private final FavoriteOfferRepository favorites;
+    private final ApplicationKitRepository applicationKits;
 
-    public AdminJobOfferController(JobOfferRepository offers, JobApplicationRepository applications, FavoriteOfferRepository favorites) { this.offers = offers; this.applications=applications; this.favorites=favorites; }
+    public AdminJobOfferController(JobOfferRepository offers, JobApplicationRepository applications,
+            FavoriteOfferRepository favorites, ApplicationKitRepository applicationKits) {
+        this.offers = offers;
+        this.applications = applications;
+        this.favorites = favorites;
+        this.applicationKits = applicationKits;
+    }
 
     @GetMapping
     public List<JobOfferResponse> list() {
@@ -53,7 +61,12 @@ public class AdminJobOfferController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
-        if (applications.existsByJobOfferId(id) || favorites.existsByJobOfferId(id)) throw new ResponseStatusException(HttpStatus.CONFLICT, "This offer still has linked records. Archive it instead.");
+        if (applications.existsByJobOfferId(id)
+                || favorites.existsByJobOfferId(id)
+                || applicationKits.existsByJobOfferId(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "This offer still has linked records. Archive it instead.");
+        }
         offers.delete(find(id));
     }
 

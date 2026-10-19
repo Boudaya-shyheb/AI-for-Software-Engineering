@@ -48,6 +48,9 @@ interface InterviewSession { id: number; offerId: number; offerTitle: string; co
 interface CandidateProfile { id: number; fullName: string; email: string; headline: string; savedCvText: string; skills: string; preferences: string; }
 interface CodeDebugFinding { bug_type: string; severity: string; line: number; message: string; recommendation: string; }
 interface CodeDebugResult { module_label: string; bug_type: string; analysis_method: string; code_was_executed: boolean; summary: string; findings: CodeDebugFinding[]; }
+interface ProgressGoal { id: number; skillName: string; objective: string; activity: string; exercise: string; status: 'TO_DO' | 'IN_PROGRESS' | 'DONE'; statusLabel: string; sortOrder: number; createdAt: string; updatedAt: string; }
+interface ProgressPlan { id: number; analysisId: number | null; jobOfferId: number | null; title: string; summary: string; progressPercentage: number; totalGoals: number; completedGoals: number; goals: ProgressGoal[]; createdAt: string; updatedAt: string; }
+interface ApplicationKit { id: number; jobOfferId: number; offerTitle: string; company: string; adaptedCv: string; coverLetter: string; matchedSkills: string[]; missingSkills: string[]; createdAt: string; updatedAt: string; }
 
 @Component({
   selector: 'app-root',
@@ -74,7 +77,7 @@ export class AppComponent {
   readonly marketingPreview = signal(true);
   readonly authLoading = signal(false);
   readonly authError = signal('');
-  readonly currentView = signal<'analyzer' | 'jobs' | 'interviews' | 'profile' | 'debug' | 'admin'>('analyzer');
+  readonly currentView = signal<'analyzer' | 'jobs' | 'interviews' | 'profile' | 'progress' | 'applications' | 'debug' | 'admin'>('analyzer');
   readonly sidebarCollapsed = signal(false);
   readonly mobileSidebarOpen = signal(false);
   readonly uploadingCv = signal(false);
@@ -135,6 +138,17 @@ export class AppComponent {
   readonly profileLoading = signal(false);
   readonly profileSaving = signal(false);
   readonly profileMessage = signal('');
+  readonly analysisId = signal<number | null>(null);
+  readonly progressPlans = signal<ProgressPlan[]>([]);
+  readonly progressPlansLoading = signal(false);
+  readonly progressPlansError = signal('');
+  readonly selectedProgressPlan = signal<ProgressPlan | null>(null);
+  readonly planGenerating = signal(false);
+  readonly applicationKits = signal<ApplicationKit[]>([]);
+  readonly selectedKit = signal<ApplicationKit | null>(null);
+  readonly kitLoading = signal(false);
+  readonly kitError = signal('');
+  readonly kitLetterDraft = signal('');
   readonly favoriteOfferIds = signal<number[]>([]);
   readonly debugModule = signal<'matching' | 'offers' | 'interviews' | 'profile'>('matching');
   readonly debugLanguage = signal<'python' | 'java' | 'javascript' | 'typescript'>('python');
@@ -234,13 +248,14 @@ export class AppComponent {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  openFromLanding(view: 'analyzer' | 'jobs' | 'profile' | 'admin'): void {
+  openFromLanding(view: 'analyzer' | 'jobs' | 'profile' | 'progress' | 'admin'): void {
     if (!this.user()) { this.openAuth('login'); return; }
     this.returnToWorkspace();
     window.setTimeout(() => {
       if (view === 'analyzer') this.showAnalyzer();
       else if (view === 'jobs') void this.openJobs();
       else if (view === 'profile') void this.openProfile();
+      else if (view === 'progress') void this.openProgressPlans();
       else if (view === 'admin' && this.user()?.role === 'ADMIN') void this.openAdmin();
     }, 0);
   }
@@ -261,6 +276,10 @@ export class AppComponent {
     this.profileHeadline = '';
     this.profileSkills = '';
     this.profilePreferences = '';
+    this.analysisId.set(null);
+    this.progressPlans.set([]);
+    this.selectedProgressPlan.set(null);
+    this.progressPlansError.set('');
     this.jobMatches.set([]);
     this.interviewCv.set('');
     this.interviewSession.set(null);
@@ -274,6 +293,7 @@ export class AppComponent {
     this.loading.set(true);
     this.error.set('');
     this.result.set(null);
+    this.analysisId.set(null);
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), 120_000);
     try {
@@ -284,9 +304,10 @@ export class AppComponent {
         signal: controller.signal,
       });
       if (!response.ok) throw new Error(await this.responseError(response, 'The AI service could not complete this analysis.'));
-      const payload = await response.json() as { result: AnalysisResult };
+      const payload = await response.json() as { result: AnalysisResult; analysis_id?: number | null };
       if (!payload.result) throw new Error('The AI service returned an invalid response.');
       this.result.set(payload.result);
+      this.analysisId.set(payload.analysis_id ?? null);
     } catch (analysisError) {
       this.error.set(analysisError instanceof DOMException && analysisError.name === 'AbortError'
         ? 'The analysis took too long. Please try again.'
@@ -463,12 +484,14 @@ export class AppComponent {
   closeMobileSidebar(): void { this.mobileSidebarOpen.set(false); }
 
   currentViewLabel(): string {
-    return ({ analyzer: 'Matching IA', jobs: 'Offres d’emploi', interviews: 'Interview practice', profile: 'Mon profil', debug: 'AI Code Debugger', admin: 'Administration' } as const)[this.currentView()];
+    return ({ analyzer: 'Matching IA', jobs: 'Offres d’emploi', interviews: 'Interview practice', profile: 'Mon profil', progress: 'Mon plan de progression', applications: 'My applications', debug: 'AI Code Debugger', admin: 'Administration' } as const)[this.currentView()];
   }
 
-  sceneVariant(): 'analyzer' | 'jobs' | 'profile' | 'admin' {
+  sceneVariant(): 'analyzer' | 'jobs' | 'profile' | 'admin' | 'progress' {
     const view = this.currentView();
-    return view === 'interviews' || view === 'debug' ? 'jobs' : view;
+    if (view === 'interviews' || view === 'applications' || view === 'debug') return 'jobs';
+    if (view === 'progress') return 'progress';
+    return view;
   }
 
   private animateCurrentView(): void {
@@ -525,6 +548,194 @@ export class AppComponent {
       repeat: Infinity,
       ease: 'linear',
     });
+  }
+
+  async openProgressPlans(): Promise<void> {
+    this.currentView.set('progress');
+    this.progressPlansError.set('');
+    this.selectedProgressPlan.set(null);
+    await this.loadProgressPlans();
+  }
+
+  async loadProgressPlans(): Promise<void> {
+    this.progressPlansLoading.set(true);
+    this.progressPlansError.set('');
+    try {
+      const response = await this.authorizedFetch(`${this.apiUrl}/progress-plans`);
+      if (!response.ok) throw new Error(await this.responseError(response, 'Impossible de charger votre plan de progression.'));
+      const plans = await response.json() as ProgressPlan[];
+      this.progressPlans.set(plans ?? []);
+      if (plans.length) {
+        this.selectedProgressPlan.set(plans[0]);
+      }
+    } catch (error) {
+      this.progressPlansError.set(error instanceof Error ? error.message : 'Impossible de charger votre plan de progression.');
+    } finally {
+      this.progressPlansLoading.set(false);
+    }
+  }
+
+  async openApplicationKits(): Promise<void> {
+    this.currentView.set('applications');
+    this.kitError.set('');
+    this.selectedKit.set(null);
+    this.kitLetterDraft.set('');
+    await this.loadApplicationKits();
+  }
+
+  async loadApplicationKits(): Promise<void> {
+    this.kitLoading.set(true);
+    this.kitError.set('');
+    try {
+      const response = await this.authorizedFetch(`${this.apiUrl}/application-kits`);
+      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to load your application kits.'));
+      const kits = await response.json() as ApplicationKit[];
+      this.applicationKits.set(kits ?? []);
+      if (kits.length) {
+        this.selectedKit.set(kits[0]);
+        this.kitLetterDraft.set(kits[0].coverLetter);
+      }
+    } catch (error) {
+      this.kitError.set(error instanceof Error ? error.message : 'Unable to load your application kits.');
+    } finally {
+      this.kitLoading.set(false);
+    }
+  }
+
+  selectKit(kit: ApplicationKit): void {
+    this.selectedKit.set(kit);
+    this.kitLetterDraft.set(kit.coverLetter);
+  }
+
+  async generateKitForOffer(offer: JobOffer): Promise<void> {
+    if (this.kitLoading()) return;
+    this.kitLoading.set(true);
+    this.kitError.set('');
+    try {
+      const response = await this.authorizedFetch(`${this.apiUrl}/application-kits`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobOfferId: offer.id }),
+      });
+      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to generate your application kit.'));
+      const kit = await response.json() as ApplicationKit;
+      this.applicationKits.update(current => [kit, ...current.filter(item => item.id !== kit.id)]);
+      this.selectedKit.set(kit);
+      this.kitLetterDraft.set(kit.coverLetter);
+      this.currentView.set('applications');
+    } catch (error) {
+      this.kitError.set(error instanceof Error ? error.message : 'Unable to generate your application kit.');
+    } finally {
+      this.kitLoading.set(false);
+    }
+  }
+
+  async saveCoverLetter(): Promise<void> {
+    const kit = this.selectedKit();
+    if (!kit || this.kitLoading()) return;
+    this.kitLoading.set(true);
+    this.kitError.set('');
+    try {
+      const response = await this.authorizedFetch(`${this.apiUrl}/application-kits/${kit.id}/cover-letter`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coverLetter: this.kitLetterDraft() }),
+      });
+      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to save your cover letter.'));
+      const updated = await response.json() as ApplicationKit;
+      this.applicationKits.update(current => current.map(item => item.id === updated.id ? updated : item));
+      this.selectedKit.set(updated);
+      this.kitLetterDraft.set(updated.coverLetter);
+    } catch (error) {
+      this.kitError.set(error instanceof Error ? error.message : 'Unable to save your cover letter.');
+    } finally {
+      this.kitLoading.set(false);
+    }
+  }
+
+  async deleteKit(kit: ApplicationKit): Promise<void> {
+    if (this.kitLoading() || !window.confirm('Delete this application kit?')) return;
+    this.kitLoading.set(true);
+    this.kitError.set('');
+    try {
+      const response = await this.authorizedFetch(`${this.apiUrl}/application-kits/${kit.id}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error(await this.responseError(response, 'Unable to delete your application kit.'));
+      this.applicationKits.update(current => current.filter(item => item.id !== kit.id));
+      if (this.selectedKit()?.id === kit.id) {
+        const remaining = this.applicationKits()[0] ?? null;
+        this.selectedKit.set(remaining);
+        this.kitLetterDraft.set(remaining?.coverLetter ?? '');
+      }
+    } catch (error) {
+      this.kitError.set(error instanceof Error ? error.message : 'Unable to delete your application kit.');
+    } finally {
+      this.kitLoading.set(false);
+    }
+  }
+
+  async copyText(text: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      this.kitError.set('Unable to copy the text.');
+    }
+  }
+
+  async createProgressPlanFromAnalysis(): Promise<void> {
+    const missingSkills = this.result()?.skills?.missing_required_skills ?? [];
+    if (!missingSkills.length) {
+      this.progressPlansError.set('Aucune compétence manquante détectée pour générer un plan personnalisé.');
+      return;
+    }
+    this.planGenerating.set(true);
+    this.progressPlansError.set('');
+    try {
+      const response = await this.authorizedFetch(`${this.apiUrl}/progress-plans`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          analysisId: this.analysisId(),
+          jobOfferId: this.selectedOffer()?.id ?? null,
+          summary: 'Suggestions automatiques fondées sur les lacunes détectées lors du matching.',
+          missingSkills,
+        }),
+      });
+      if (!response.ok) throw new Error(await this.responseError(response, 'Le plan de progression n’a pas pu être créé.'));
+      const created = await response.json() as ProgressPlan;
+      this.progressPlans.update(current => [created, ...current.filter(plan => plan.id !== created.id)]);
+      this.selectedProgressPlan.set(created);
+      this.currentView.set('progress');
+    } catch (error) {
+      this.progressPlansError.set(error instanceof Error ? error.message : 'Le plan de progression n’a pas pu être créé.');
+    } finally {
+      this.planGenerating.set(false);
+    }
+  }
+
+  async updateProgressGoalStatus(planId: number, goalId: number, status: 'TO_DO' | 'IN_PROGRESS' | 'DONE'): Promise<void> {
+    const response = await this.authorizedFetch(`${this.apiUrl}/progress-plans/${planId}/goals/${goalId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    if (!response.ok) {
+      this.progressPlansError.set(await this.responseError(response, 'Le statut du plan n’a pas pu être mis à jour.'));
+      return;
+    }
+    const updated = await response.json() as ProgressPlan;
+    this.progressPlans.update(current => current.map(plan => plan.id === updated.id ? updated : plan));
+    const active = this.selectedProgressPlan();
+    this.selectedProgressPlan.set(active && active.id === updated.id ? updated : active);
+    this.progressPlansError.set('');
+  }
+
+  progressStatusLabel(status: 'TO_DO' | 'IN_PROGRESS' | 'DONE'): string {
+    return ({ TO_DO: 'À faire', IN_PROGRESS: 'En cours', DONE: 'Terminé' } as const)[status];
+  }
+
+  progressPercentageForPlan(plan: ProgressPlan | null): number {
+    if (!plan) return 0;
+    return Math.round(plan.progressPercentage);
   }
 
   async openInterviews(): Promise<void> {

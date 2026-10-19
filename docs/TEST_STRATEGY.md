@@ -8,6 +8,7 @@ These tests target application behavior and module workflows. They do not stop a
 | Job offers | Controller workflow tests | Public catalog excludes archived offers; admin archive changes availability without deleting the offer; linked offers cannot be deleted. |
 | Candidate profile | Controller workflow tests | Profile reads use the authenticated account; profile updates persist the saved CV so a later matching session can reuse it. |
 | Interview practice | AI workflow tests, service state-transition tests, admin privacy/reporting tests | Questions use CV and role context, answer evaluation and final summary work together, completed sessions reject more answers, users cannot read another user's session, and admin results omit CV text and raw answers. |
+| Application Generator | AI generator tests, service unit tests | Deterministic document generation, no-invention verification, AI failure handling, ownership checks, timestamp behavior, cover-letter updates, and kit deletion. |
 
 ## Run
 

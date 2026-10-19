@@ -6,6 +6,8 @@
       <button type="button" [class.active]="user() && !marketingPreview() && currentView() === 'analyzer'" (click)="openFromLanding('analyzer')">Matching IA</button>
       <button type="button" [class.active]="user() && !marketingPreview() && currentView() === 'jobs'" (click)="openFromLanding('jobs')">Offres</button>
       <button *ngIf="user()?.role !== 'ADMIN'" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'interviews'" (click)="openInterviews()">Interview practice</button>
+      <button *ngIf="user()?.role !== 'ADMIN'" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'applications'" (click)="openApplicationKits()">My applications</button>
+      <button *ngIf="user()" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'progress'" (click)="openFromLanding('progress')">Mon plan</button>
       <button *ngIf="user()" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'debug'" (click)="openCodeDebugger()">AI Code Debugger</button>
       <button type="button" [class.active]="user() && !marketingPreview() && currentView() === 'profile'" (click)="openFromLanding('profile')">Profil</button>
       <button *ngIf="!user() || user()?.role === 'ADMIN'" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'admin'" (click)="openFromLanding('admin')">Admin</button>
@@ -181,6 +183,8 @@
           <p class="section-number">JOB DESCRIPTION</p><h2>{{ offer.title }}</h2><p class="job-company">{{ offer.company }}</p>
           <div class="job-meta"><span>⌖ {{ offer.location }}</span><span>{{ offer.employmentType }}</span></div>
           <div class="offer-description">{{ offer.description }}</div>
+          <button type="button" class="kit-generate" (click)="generateKitForOffer(offer)" [disabled]="kitLoading()"><span *ngIf="kitLoading()" class="button-spinner"></span>{{ kitLoading() ? 'Generating…' : 'Generate my application' }}</button>
+          <p *ngIf="kitError()" class="error-message" role="alert">{{ kitError() }}</p>
         </article>
         <form class="job-match-card" (ngSubmit)="matchSelectedOffer()">
           <span class="match-icon">AI</span><p class="section-number">INSTANT MATCH</p><h2>Compare your CV</h2><p>Upload your CV and our AI will measure its compatibility with this specific role.</p>
@@ -190,6 +194,31 @@
           <textarea required [(ngModel)]="cvText" name="offerCvText" placeholder="Your extracted CV text will appear here…"></textarea>
           <button class="match-submit" type="submit" [disabled]="loading() || !cvText.trim()"><span *ngIf="loading()" class="button-spinner"></span>{{ loading() ? 'Calculating match…' : 'See my matching result' }}</button>
         </form>
+      </div>
+    </section>
+
+    <section *ngIf="currentView() === 'applications'" class="progress-page applications-page">
+      <div class="jobs-heading"><div><p class="section-number">APPLICATION KITS</p><h1>My applications</h1><p>Review your tailored CVs and cover letters for each job offer.</p></div></div>
+      <div *ngIf="kitLoading()" class="admin-loading"><span class="button-spinner"></span> Loading your applications…</div>
+      <div *ngIf="kitError()" class="error-message" role="alert"><span>!</span><div><b>Application kits unavailable</b><p>{{ kitError() }}</p></div></div>
+      <div *ngIf="!kitLoading() && !applicationKits().length" class="empty-jobs"><span>◎</span><h2>No application kits yet</h2><p>Generate a tailored application from an active job offer.</p><button type="button" class="secondary-button" (click)="openJobs()">Browse job offers</button></div>
+
+      <div *ngIf="!selectedKit() && applicationKits().length" class="progress-list">
+        <article *ngFor="let kit of applicationKits()" class="progress-card" (click)="selectKit(kit)">
+          <div class="progress-header"><div><p class="section-number">{{ kit.offerTitle }}</p><h2>{{ kit.company }}</h2></div><span class="progress-pill">{{ kit.matchedSkills.length }} shared skills</span></div>
+          <div class="progress-meta"><small>{{ kit.createdAt | date:'mediumDate' }}</small><button type="button" class="secondary-button" (click)="selectKit(kit); $event.stopPropagation()">View application</button></div>
+        </article>
+      </div>
+
+      <div *ngIf="selectedKit() as kit" class="progress-detail">
+        <div class="progress-detail-header"><div><p class="section-number">{{ kit.company }}</p><h2>{{ kit.offerTitle }}</h2><small>{{ kit.createdAt | date:'mediumDate' }}</small></div><button type="button" class="secondary-button" (click)="selectedKit.set(null)">Back to applications</button></div>
+        <div class="kit-document-grid">
+          <div><div class="progress-header"><h3>Tailored CV</h3><button type="button" class="secondary-button" (click)="copyText(kit.adaptedCv)">Copy CV</button></div><pre>{{ kit.adaptedCv }}</pre></div>
+          <div><div class="progress-header"><h3>Cover letter</h3><button type="button" class="secondary-button" (click)="copyText(kitLetterDraft())">Copy letter</button></div><p *ngIf="kit.updatedAt !== kit.createdAt" class="progress-meta">Edited by you — not checked against your CV</p><textarea maxlength="10000" [value]="kitLetterDraft()" (input)="kitLetterDraft.set($any($event.target).value)"></textarea><button type="button" class="secondary-button" (click)="saveCoverLetter()" [disabled]="kitLoading()">{{ kitLoading() ? 'Saving…' : 'Save letter' }}</button></div>
+        </div>
+        <div class="kit-skills"><b>Shared skills</b><span *ngFor="let skill of kit.matchedSkills">{{ skill }}</span><i *ngIf="!kit.matchedSkills.length">No shared skills</i></div>
+        <p>Skills not claimed (missing from your CV): {{ kit.missingSkills.length ? kit.missingSkills.join(', ') : 'None' }}</p>
+        <button type="button" class="secondary-button" (click)="deleteKit(kit)" [disabled]="kitLoading()">Delete</button>
       </div>
     </section>
 
@@ -221,8 +250,64 @@
       <div *ngIf="profileLoading()" class="admin-loading"><span class="button-spinner"></span> Loading profile…</div>
       <form *ngIf="!profileLoading()" #profileForm="ngForm" class="profile-layout" (ngSubmit)="saveProfile()">
         <div class="profile-card profile-identity"><div class="profile-avatar">{{ profileFullName.charAt(0).toUpperCase() || 'U' }}</div><label><span>Full name</span><input required maxlength="100" [(ngModel)]="profileFullName" name="profileFullName"></label><label><span>Professional headline</span><input maxlength="160" [(ngModel)]="profileHeadline" name="profileHeadline" placeholder="Full-stack developer · Angular & Spring Boot"></label><label><span>Main skills</span><textarea [(ngModel)]="profileSkills" name="profileSkills" placeholder="Angular, Java, Docker, teamwork…"></textarea></label><label><span>Job preferences</span><textarea [(ngModel)]="profilePreferences" name="profilePreferences" placeholder="Remote, Tunis, CDI, software engineering…"></textarea></label></div>
-        <div class="profile-card profile-cv"><div class="profile-card-title"><div><p class="section-number">PRIMARY CV</p><h2>Reusable resume</h2></div><span>{{ profileCv.length }} characters</span></div><input #profileCvFile hidden type="file" accept=".pdf,.docx,.txt" (change)="uploadDocument($event, 'profile')"><button type="button" class="profile-upload" (click)="profileCvFile.click()" [disabled]="uploadingCv()">{{ uploadingCv() ? 'Extracting…' : '↑ Upload PDF, DOCX or TXT' }}</button><textarea [(ngModel)]="profileCv" name="profileCv" placeholder="Upload your CV or paste its content here…"></textarea><p *ngIf="profileMessage()" class="profile-success">✓ {{ profileMessage() }}</p><button class="profile-save" type="submit" [disabled]="profileForm.invalid || profileSaving()"><span *ngIf="profileSaving()" class="button-spinner"></span>{{ profileSaving() ? 'Saving…' : 'Save my profile' }}</button></div>
+        <div class="profile-card profile-cv"><div class="profile-card-title"><div><p class="section-number">PRIMARY CV</p><h2>Reusable resume</h2></div><span>{{ profileCv.length }} characters</span></div><input #profileCvFile hidden type="file" accept=".pdf,.docx,.txt" (change)="uploadDocument($event, 'profile')"><button type="button" class="profile-upload" (click)="profileCvFile.click()" [disabled]="uploadingCv()">{{ uploadingCv() ? 'Extracting…' : '↑ Upload PDF, DOCX or TXT' }}</button><textarea [(ngModel)]="profileCv" name="profileCv" placeholder="Upload your CV or paste its content here…"></textarea><p *ngIf="profileMessage()" class="profile-success">✓ {{ profileMessage() }}</p><div class="profile-actions"><button type="button" class="secondary-button" (click)="openProgressPlans()">Mon plan de progression</button></div><button class="profile-save" type="submit" [disabled]="profileForm.invalid || profileSaving()"><span *ngIf="profileSaving()" class="button-spinner"></span>{{ profileSaving() ? 'Saving…' : 'Save my profile' }}</button></div>
       </form>
+    </section>
+
+    <section *ngIf="currentView() === 'progress'" class="progress-page">
+      <div class="jobs-heading"><div><p class="section-number">PERSONALIZED ROADMAP</p><h1>Mon plan de progression</h1><p>Suggestions automatiques fondées sur les lacunes détectées par le matching. Vous pouvez suivre chaque objectif et mettre à jour son statut.</p></div><button *ngIf="selectedProgressPlan()" type="button" class="secondary-button" (click)="selectedProgressPlan.set(null)">Retour à mes plans</button></div>
+      <div *ngIf="progressPlansLoading()" class="admin-loading"><span class="button-spinner"></span> Chargement de votre plan…</div>
+      <div *ngIf="progressPlansError()" class="error-message" role="alert"><span>!</span><div><b>Plan de progression indisponible</b><p>{{ progressPlansError() }}</p></div></div>
+      <div *ngIf="!progressPlansLoading() && !progressPlans().length" class="empty-jobs"><span>◎</span><h2>Aucun plan généré</h2><p>Complétez un matching pour créer votre plan de progression personnalisé.</p><button type="button" class="secondary-button" (click)="showAnalyzer()">Retour au matching</button></div>
+
+      <div *ngIf="!selectedProgressPlan() && progressPlans().length" class="progress-list">
+        <article *ngFor="let plan of progressPlans()" class="progress-card">
+          <div class="progress-header">
+            <div>
+              <p class="section-number">PLAN</p>
+              <h2>{{ plan.title }}</h2>
+            </div>
+            <span class="progress-pill">{{ progressPercentageForPlan(plan) }}%</span>
+          </div>
+          <p class="progress-summary">{{ plan.summary }}</p>
+          <div class="progress-meter"><span [style.width.%]="progressPercentageForPlan(plan)"></span></div>
+          <div class="progress-meta"><small>{{ plan.completedGoals }} / {{ plan.totalGoals }} objectifs terminés</small><button type="button" class="secondary-button" (click)="selectedProgressPlan.set(plan)">Voir le plan</button></div>
+        </article>
+      </div>
+
+      <div *ngIf="selectedProgressPlan() as plan" class="progress-detail">
+        <div class="progress-detail-header">
+          <div>
+            <p class="section-number">PLAN EN COURS</p>
+            <h2>{{ plan.title }}</h2>
+          </div>
+          <div class="progress-total"><strong>{{ progressPercentageForPlan(plan) }}%</strong><span>{{ plan.completedGoals }} / {{ plan.totalGoals }} terminés</span></div>
+        </div>
+        <p class="progress-summary detail-summary">{{ plan.summary }}</p>
+        <div class="progress-meter"><span [style.width.%]="progressPercentageForPlan(plan)"></span></div>
+        <div class="progress-goal-list">
+          <article *ngFor="let goal of plan.goals" class="goal-card">
+            <div class="goal-head">
+              <div>
+                <p class="goal-skill">{{ goal.skillName }}</p>
+                <h3>{{ goal.objective }}</h3>
+              </div>
+              <label class="status-select-wrap">
+                <span>Statut</span>
+                <select [value]="goal.status" (change)="updateProgressGoalStatus(plan.id, goal.id, ($any($event.target)).value)">
+                  <option value="TO_DO">À faire</option>
+                  <option value="IN_PROGRESS">En cours</option>
+                  <option value="DONE">Terminé</option>
+                </select>
+              </label>
+            </div>
+            <div class="goal-meta">
+              <div><b>Activité d’apprentissage</b><p>{{ goal.activity }}</p></div>
+              <div><b>Exercice pratique</b><p>{{ goal.exercise }}</p></div>
+            </div>
+          </article>
+        </div>
+      </div>
     </section>
 
     <section *ngIf="currentView() === 'debug'" class="code-debug-page">
@@ -247,6 +332,13 @@
         <app-career-visual class="report-scene" variant="report"></app-career-visual>
         <div><p class="section-number">02 — YOUR REPORT</p><h2 id="report-title">Compatibility with {{ selectedOffer()?.title || 'your best match' }}</h2></div>
         <span class="report-id">Analysis complete <i>✓</i></span>
+      </div>
+      <div class="report-actions">
+        <button *ngIf="(result()?.skills?.missing_required_skills?.length ?? 0) > 0" type="button" class="plan-button" (click)="createProgressPlanFromAnalysis()" [disabled]="planGenerating()">
+          <span *ngIf="planGenerating()" class="button-spinner"></span>
+          {{ planGenerating() ? 'Génération du plan…' : 'Créer mon plan de progression' }}
+        </button>
+        <small>Suggestions automatiques fondées sur les compétences manquantes détectées lors du matching.</small>
       </div>
       <div class="report-summary">
         <article class="score-card">

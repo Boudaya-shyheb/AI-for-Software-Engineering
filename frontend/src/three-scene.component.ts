@@ -1,7 +1,7 @@
 import { AfterViewInit, Component, ElementRef, Input, OnChanges, OnDestroy, SimpleChanges, ViewChild } from '@angular/core';
 import * as THREE from 'three';
 
-type SceneVariant = 'landing' | 'auth' | 'analyzer' | 'jobs' | 'applications' | 'profile' | 'admin';
+type SceneVariant = 'landing' | 'auth' | 'analyzer' | 'jobs' | 'applications' | 'profile' | 'admin' | 'progress';
 
 @Component({
   selector: 'app-three-scene',
@@ -155,7 +155,7 @@ export class ThreeSceneComponent implements AfterViewInit, OnChanges, OnDestroy 
     this.world.add(this.pageDecor);
 
     if (this.variant === 'analyzer') this.addAnalyzerDecor(this.pageDecor);
-    else if (this.variant === 'jobs') this.addJobsDecor(this.pageDecor);
+    else if (this.variant === 'jobs' || this.variant === 'progress') this.addJobsDecor(this.pageDecor);
     else if (this.variant === 'applications') this.addApplicationsDecor(this.pageDecor);
     else if (this.variant === 'profile') this.addProfileDecor(this.pageDecor);
     else if (this.variant === 'admin') this.addAdminDecor(this.pageDecor);
