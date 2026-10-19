@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.server.ResponseStatusException;
 
 class ApplicationKitServiceTest {
@@ -225,6 +226,31 @@ class ApplicationKitServiceTest {
 
         // Assert
         assertEquals(502, error.getStatusCode().value());
+        verify(kits, never()).save(any(ApplicationKit.class));
+    }
+
+    @Test
+    void aiServiceUnavailableReturnsBadGateway() {
+        // Arrange
+        UserAccount user = user("Profile CV");
+        JobOffer offer = offer(15L);
+        ApplicationKitRepository kits = mock(ApplicationKitRepository.class);
+        JobOfferRepository offers = mock(JobOfferRepository.class);
+        UserRepository users = mock(UserRepository.class);
+        AiServiceClient ai = mock(AiServiceClient.class);
+        when(users.findByEmailIgnoreCase(EMAIL)).thenReturn(Optional.of(user));
+        when(offers.findById(15L)).thenReturn(Optional.of(offer));
+        doThrow(new ResourceAccessException("connection refused")).when(ai)
+                .generateApplication(any(), any(), any(), any(), any());
+        ApplicationKitService service = new ApplicationKitService(kits, offers, users, ai);
+
+        // Act
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> service.generate(EMAIL, new ApplicationKitCreateRequest(15L, null)));
+
+        // Assert
+        assertEquals(502, error.getStatusCode().value());
+        assertEquals("The AI service is unavailable", error.getReason());
         verify(kits, never()).save(any(ApplicationKit.class));
     }
 

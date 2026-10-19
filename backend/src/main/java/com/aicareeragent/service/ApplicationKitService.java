@@ -14,6 +14,7 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -52,8 +53,14 @@ public class ApplicationKitService {
                     "Add a CV to your profile or paste one");
         }
 
-        Map<?, ?> generated = ai.generateApplication(
-                cvText, offer.getTitle(), offer.getCompany(), offer.getDescription(), user.getFullName());
+        Map<?, ?> generated;
+        try {
+            generated = ai.generateApplication(
+                    cvText, offer.getTitle(), offer.getCompany(), offer.getDescription(), user.getFullName());
+        } catch (RestClientException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "The AI service is unavailable");
+        }
         GeneratedApplication application = readGeneratedApplication(generated);
         if (!application.verified()) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
