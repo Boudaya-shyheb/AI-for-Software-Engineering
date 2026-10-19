@@ -53,6 +53,19 @@ public class AiServiceClient {
                 .retrieve().body(Map.class);
     }
 
+    /** Generates an application kit from a CV and a job offer. */
+    public Map<?, ?> generateApplication(String cvText, String jobTitle, String company,
+            String jobDescription, String candidateName) {
+        return client.post().uri("/api/applications/generate").contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of(
+                        "cv_text", cvText,
+                        "job_title", jobTitle,
+                        "company", company,
+                        "job_description", jobDescription,
+                        "candidate_name", candidateName))
+                .retrieve().body(Map.class);
+    }
+
     public Map<?, ?> evaluateInterviewAnswer(String question, String answer, String cvText, String jobDescription, String type) {
         return client.post().uri("/api/interviews/evaluate").contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("question", question, "answer", answer, "cv_text", cvText, "job_description", jobDescription, "question_type", type))
