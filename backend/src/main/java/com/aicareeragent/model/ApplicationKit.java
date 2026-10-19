@@ -42,10 +42,10 @@ public class ApplicationKit {
     private String missingSkills = "";
 
     @Column(nullable = false, updatable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 
     @Column(nullable = false)
-    private Instant updatedAt = Instant.now();
+    private Instant updatedAt;
 
     protected ApplicationKit() {}
 
@@ -57,6 +57,9 @@ public class ApplicationKit {
         this.coverLetter = coverLetter;
         this.matchedSkills = joinSkills(matchedSkills);
         this.missingSkills = joinSkills(missingSkills);
+        Instant now = Instant.now();
+        this.createdAt = now;
+        this.updatedAt = now;
     }
 
     public Long getId() { return id; }

@@ -27,6 +27,39 @@ class ApplicationKitServiceTest {
     private static final String EMAIL = "candidate@example.test";
 
     @Test
+    void newKitHasEqualCreatedAndUpdatedAt() {
+        // Arrange
+        UserAccount user = user("Profile CV");
+        JobOffer offer = offer(16L);
+
+        // Act
+        ApplicationKit kit = new ApplicationKit(user, offer, "Adapted CV", "Letter",
+                List.of("java"), List.of("docker"));
+
+        // Assert
+        assertEquals(kit.getCreatedAt(), kit.getUpdatedAt());
+    }
+
+    @Test
+    void updatingCoverLetterChangesOnlyUpdatedAt() {
+        // Arrange
+        UserAccount user = user("Profile CV");
+        JobOffer offer = offer(17L);
+        ApplicationKit kit = new ApplicationKit(user, offer, "Adapted CV", "Old letter",
+                List.of("java"), List.of("docker"));
+        Instant createdAt = kit.getCreatedAt();
+        Instant previousUpdatedAt = kit.getUpdatedAt();
+
+        // Act
+        kit.updateCoverLetter("New letter");
+
+        // Assert
+        assertEquals(createdAt, kit.getCreatedAt());
+        assertTrue(!kit.getUpdatedAt().isBefore(previousUpdatedAt));
+        assertEquals("New letter", kit.getCoverLetter());
+    }
+
+    @Test
     void generateUsesProfileCvAndSavesCompleteApplicationKit() throws Exception {
         // Arrange
         UserAccount user = user("Profile CV");
