@@ -6,6 +6,7 @@
       <button type="button" [class.active]="user() && !marketingPreview() && currentView() === 'analyzer'" (click)="openFromLanding('analyzer')">Matching IA</button>
       <button type="button" [class.active]="user() && !marketingPreview() && currentView() === 'jobs'" (click)="openFromLanding('jobs')">Offres</button>
       <button *ngIf="user()?.role !== 'ADMIN'" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'interviews'" (click)="openInterviews()">Interview practice</button>
+      <button *ngIf="user()?.role !== 'ADMIN'" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'applications'" (click)="openApplicationKits()">My applications</button>
       <button *ngIf="user()" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'progress'" (click)="openFromLanding('progress')">Mon plan</button>
       <button *ngIf="user()" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'debug'" (click)="openCodeDebugger()">AI Code Debugger</button>
       <button type="button" [class.active]="user() && !marketingPreview() && currentView() === 'profile'" (click)="openFromLanding('profile')">Profil</button>
@@ -182,6 +183,8 @@
           <p class="section-number">JOB DESCRIPTION</p><h2>{{ offer.title }}</h2><p class="job-company">{{ offer.company }}</p>
           <div class="job-meta"><span>⌖ {{ offer.location }}</span><span>{{ offer.employmentType }}</span></div>
           <div class="offer-description">{{ offer.description }}</div>
+          <button type="button" class="kit-generate" (click)="generateKitForOffer(offer)" [disabled]="kitLoading()"><span *ngIf="kitLoading()" class="button-spinner"></span>{{ kitLoading() ? 'Generating…' : 'Generate my application' }}</button>
+          <p *ngIf="kitError()" class="error-message" role="alert">{{ kitError() }}</p>
         </article>
         <form class="job-match-card" (ngSubmit)="matchSelectedOffer()">
           <span class="match-icon">AI</span><p class="section-number">INSTANT MATCH</p><h2>Compare your CV</h2><p>Upload your CV and our AI will measure its compatibility with this specific role.</p>
@@ -191,6 +194,31 @@
           <textarea required [(ngModel)]="cvText" name="offerCvText" placeholder="Your extracted CV text will appear here…"></textarea>
           <button class="match-submit" type="submit" [disabled]="loading() || !cvText.trim()"><span *ngIf="loading()" class="button-spinner"></span>{{ loading() ? 'Calculating match…' : 'See my matching result' }}</button>
         </form>
+      </div>
+    </section>
+
+    <section *ngIf="currentView() === 'applications'" class="progress-page applications-page">
+      <div class="jobs-heading"><div><p class="section-number">APPLICATION KITS</p><h1>My applications</h1><p>Review your tailored CVs and cover letters for each job offer.</p></div></div>
+      <div *ngIf="kitLoading()" class="admin-loading"><span class="button-spinner"></span> Loading your applications…</div>
+      <div *ngIf="kitError()" class="error-message" role="alert"><span>!</span><div><b>Application kits unavailable</b><p>{{ kitError() }}</p></div></div>
+      <div *ngIf="!kitLoading() && !applicationKits().length" class="empty-jobs"><span>◎</span><h2>No application kits yet</h2><p>Generate a tailored application from an active job offer.</p><button type="button" class="secondary-button" (click)="openJobs()">Browse job offers</button></div>
+
+      <div *ngIf="!selectedKit() && applicationKits().length" class="progress-list">
+        <article *ngFor="let kit of applicationKits()" class="progress-card" (click)="selectKit(kit)">
+          <div class="progress-header"><div><p class="section-number">{{ kit.offerTitle }}</p><h2>{{ kit.company }}</h2></div><span class="progress-pill">{{ kit.matchedSkills.length }} shared skills</span></div>
+          <div class="progress-meta"><small>{{ kit.createdAt | date:'mediumDate' }}</small><button type="button" class="secondary-button" (click)="selectKit(kit); $event.stopPropagation()">View application</button></div>
+        </article>
+      </div>
+
+      <div *ngIf="selectedKit() as kit" class="progress-detail">
+        <div class="progress-detail-header"><div><p class="section-number">{{ kit.company }}</p><h2>{{ kit.offerTitle }}</h2><small>{{ kit.createdAt | date:'mediumDate' }}</small></div><button type="button" class="secondary-button" (click)="selectedKit.set(null)">Back to applications</button></div>
+        <div class="kit-document-grid">
+          <div><div class="progress-header"><h3>Tailored CV</h3><button type="button" class="secondary-button" (click)="copyText(kit.adaptedCv)">Copy CV</button></div><pre>{{ kit.adaptedCv }}</pre></div>
+          <div><div class="progress-header"><h3>Cover letter</h3><button type="button" class="secondary-button" (click)="copyText(kitLetterDraft())">Copy letter</button></div><textarea maxlength="10000" [value]="kitLetterDraft()" (input)="kitLetterDraft.set($any($event.target).value)"></textarea><button type="button" class="secondary-button" (click)="saveCoverLetter()" [disabled]="kitLoading()">{{ kitLoading() ? 'Saving…' : 'Save letter' }}</button></div>
+        </div>
+        <div class="kit-skills"><b>Shared skills</b><span *ngFor="let skill of kit.matchedSkills">{{ skill }}</span><i *ngIf="!kit.matchedSkills.length">No shared skills</i></div>
+        <p>Skills not claimed (missing from your CV): {{ kit.missingSkills.length ? kit.missingSkills.join(', ') : 'None' }}</p>
+        <button type="button" class="secondary-button" (click)="deleteKit(kit)" [disabled]="kitLoading()">Delete</button>
       </div>
     </section>
 
