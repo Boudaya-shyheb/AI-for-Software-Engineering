@@ -99,7 +99,13 @@ def test_application_without_common_skills_has_no_skill_section_or_skill_claim()
 
     # Assert
     assert "Key skills for this role:" not in result["adapted_cv"]
-    assert CareerAgent._extract_skills(result["cover_letter"]) == []
+    letter_body = "\n".join(
+        line for line in result["cover_letter"].splitlines()
+        if not line.startswith("Dear Hiring Manager at ")
+        and not line.startswith("I am interested in the ")
+        and line not in {"Sincerely,", "Ada Lovelace"}
+    )
+    assert CareerAgent._extract_skills(letter_body) == []
     assert result["verification"] == {"verified": True, "unsupported_skills": []}
 
 

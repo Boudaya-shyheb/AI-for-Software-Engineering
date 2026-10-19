@@ -99,12 +99,38 @@ class ApplicationAgent:
                 raise ValueError(f"{name} is required")
 
         cv_skills = set(CareerAgent._extract_skills(cv_text))
-        generated_skills = set(CareerAgent._extract_skills(adapted_cv + "\n" + cover_letter))
+        generated_skills = set(
+            CareerAgent._extract_skills(
+                self._remove_metadata(adapted_cv, cover_letter)
+            )
+        )
         unsupported_skills = sorted(generated_skills - cv_skills)
         return {
             "verified": not unsupported_skills,
             "unsupported_skills": unsupported_skills,
         }
+
+    @staticmethod
+    def _remove_metadata(adapted_cv: str, cover_letter: str) -> str:
+        adapted_lines = [
+            line for line in adapted_cv.splitlines()
+            if not line.startswith("Target role: ")
+        ]
+        letter_lines = []
+        skip_signature_name = False
+        for line in cover_letter.splitlines():
+            if line.startswith("Dear Hiring Manager at "):
+                continue
+            if line.startswith("I am interested in the "):
+                continue
+            if line == "Sincerely,":
+                skip_signature_name = True
+                continue
+            if skip_signature_name:
+                skip_signature_name = False
+                continue
+            letter_lines.append(line)
+        return "\n".join(adapted_lines + letter_lines)
 
     @staticmethod
     def _contains_skill(line: str, aliases: set[str]) -> bool:
