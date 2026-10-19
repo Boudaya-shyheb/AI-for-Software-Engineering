@@ -1,4 +1,6 @@
-from app.agents.career_agent import CareerAgent, SKILL_ALIASES
+import re
+
+from app.agents.career_agent import SKILL_ALIASES
 
 
 class ApplicationAgent:
@@ -23,8 +25,8 @@ class ApplicationAgent:
             if not value or not value.strip():
                 raise ValueError(f"{name} is required")
 
-        candidate_skills = CareerAgent._extract_skills(cv_text)
-        offer_skills = CareerAgent._extract_skills(job_description)
+        candidate_skills = self._extract_skills_strict(cv_text)
+        offer_skills = self._extract_skills_strict(job_description)
         candidate_skill_set = set(candidate_skills)
         matched_skills = [
             skill for skill in offer_skills if skill in candidate_skill_set
@@ -98,9 +100,9 @@ class ApplicationAgent:
             if not value or not value.strip():
                 raise ValueError(f"{name} is required")
 
-        cv_skills = set(CareerAgent._extract_skills(cv_text))
+        cv_skills = set(self._extract_skills_strict(cv_text))
         generated_skills = set(
-            CareerAgent._extract_skills(
+            self._extract_skills_strict(
                 self._remove_metadata(adapted_cv, cover_letter)
             )
         )
@@ -134,5 +136,26 @@ class ApplicationAgent:
 
     @staticmethod
     def _contains_skill(line: str, aliases: set[str]) -> bool:
-        lowered = line.lower()
-        return any(alias in lowered for alias in aliases)
+        return bool(ApplicationAgent._extract_skills_strict(line, aliases))
+
+    @staticmethod
+    def _extract_skills_strict(
+        text: str, aliases: set[str] | None = None
+    ) -> list[str]:
+        matches = []
+        skill_aliases = (
+            {alias: [alias] for alias in aliases}
+            if aliases is not None
+            else SKILL_ALIASES
+        )
+        for skill, candidate_aliases in skill_aliases.items():
+            if any(
+                re.search(
+                    rf"(?<![a-z0-9+#]){re.escape(alias.lower())}"
+                    r"(?![a-z0-9+#])",
+                    text.lower(),
+                )
+                for alias in candidate_aliases
+            ):
+                matches.append(skill)
+        return matches
