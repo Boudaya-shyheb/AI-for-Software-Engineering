@@ -484,7 +484,7 @@ export class AppComponent {
   closeMobileSidebar(): void { this.mobileSidebarOpen.set(false); }
 
   currentViewLabel(): string {
-    return ({ analyzer: 'Matching IA', jobs: 'Offres d’emploi', interviews: 'Interview practice', profile: 'Mon profil', progress: 'Mon plan de progression', applications: 'My applications', debug: 'AI Code Debugger', admin: 'Administration' } as const)[this.currentView()];
+    return ({ analyzer: 'Matching IA', jobs: 'Offres d’emploi', interviews: 'Interview practice', profile: 'Mon profil', progress: 'Mon plan de progression', applications: 'My applications', debug: 'AI Code Debugger', admin: 'Dashboard' } as const)[this.currentView()];
   }
 
   sceneVariant(): 'analyzer' | 'jobs' | 'profile' | 'admin' | 'progress' {

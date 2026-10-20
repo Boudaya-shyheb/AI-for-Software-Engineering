@@ -8,9 +8,7 @@
       <button *ngIf="user()?.role !== 'ADMIN'" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'interviews'" (click)="openInterviews()">Interview practice</button>
       <button *ngIf="user()?.role !== 'ADMIN'" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'applications'" (click)="openApplicationKits()">My applications</button>
       <button *ngIf="user()" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'progress'" (click)="openFromLanding('progress')">Mon plan</button>
-      <button *ngIf="user()" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'debug'" (click)="openCodeDebugger()">AI Code Debugger</button>
       <button type="button" [class.active]="user() && !marketingPreview() && currentView() === 'profile'" (click)="openFromLanding('profile')">Profil</button>
-      <button *ngIf="!user() || user()?.role === 'ADMIN'" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'admin'" (click)="openFromLanding('admin')">Admin</button>
     </div>
     <div class="unified-actions"><ng-container *ngIf="user() as navUser; else publicNavActions"><div class="unified-user"><span>{{ navUser.fullName.charAt(0).toUpperCase() }}</span><div><b>{{ navUser.fullName }}</b><small>{{ navUser.role === 'ADMIN' ? 'Administrateur' : 'Candidat' }}</small></div></div><button type="button" class="unified-logout" (click)="logout()"><span>Déconnexion</span><i>↗</i></button></ng-container><ng-template #publicNavActions><button type="button" class="landing-signin" (click)="openAuth('login')">Se connecter</button><button type="button" class="landing-start" (click)="openAuth('register')">Commencer <span>→</span></button></ng-template></div>
   </nav>
@@ -70,12 +68,7 @@
     <div class="app-sidebar-head"><a class="brand" href="#top" aria-label="CareerLens"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span><span class="sidebar-label">Career<span>Lens</span></span></a></div>
     <nav>
       <p class="sidebar-group sidebar-label">ADMINISTRATION</p>
-      <button type="button" [class.active]="adminSection() === 'overview'" (click)="selectAdminSection('overview'); closeMobileSidebar()"><span class="sidebar-icon">⌂</span><span class="sidebar-label"><b>Vue d’ensemble</b><small>Indicateurs de la plateforme</small></span></button>
-      <button type="button" [class.active]="adminSection() === 'offers'" (click)="selectAdminSection('offers'); closeMobileSidebar()"><span class="sidebar-icon">▣</span><span class="sidebar-label"><b>Offres d’emploi</b><small>{{ adminOffers().length }} offre(s)</small></span></button>
-      <button type="button" [class.active]="adminSection() === 'users'" (click)="selectAdminSection('users'); closeMobileSidebar()"><span class="sidebar-icon">◎</span><span class="sidebar-label"><b>Utilisateurs</b><small>{{ adminUsers().length }} compte(s)</small></span></button>
-      <p class="sidebar-group sidebar-label">NAVIGATION</p>
-      <button type="button" (click)="showAnalyzer(); closeMobileSidebar()"><span class="sidebar-icon">←</span><span class="sidebar-label"><b>Retour au matching</b><small>Analyse et opportunités</small></span></button>
-      <button type="button" (click)="openCodeDebugger()"><span class="sidebar-icon">⌘</span><span class="sidebar-label"><b>AI Code Debugger</b><small>Diagnostic par module</small></span></button>
+      <button type="button" class="active" (click)="selectAdminSection('overview'); closeMobileSidebar()"><span class="sidebar-icon">⌂</span><span class="sidebar-label"><b>Dashboard</b><small>Vue globale de la plateforme</small></span></button>
     </nav>
     <div class="app-sidebar-user"><span>{{ currentUser.fullName.charAt(0).toUpperCase() }}</span><div class="sidebar-label"><b>{{ currentUser.fullName }}</b><small>{{ currentUser.email }}</small></div><button type="button" class="sidebar-label" title="Déconnexion" (click)="logout()">↗</button></div>
   </aside>
@@ -373,17 +366,8 @@
 
     <section *ngIf="currentView() === 'admin'" class="admin-dashboard">
       <div class="admin-shell">
-      <aside class="admin-sidebar">
-        <div class="admin-sidebar-brand"><span>CL</span><div><b>CareerLens</b><small>Administration</small></div></div>
-        <nav aria-label="Navigation administration">
-          <button type="button" [class.active]="adminSection() === 'overview'" (click)="selectAdminSection('overview')"><span>⌂</span><div><b>Vue d’ensemble</b><small>Statistiques générales</small></div></button>
-          <button type="button" [class.active]="adminSection() === 'offers'" (click)="selectAdminSection('offers')"><span>▣</span><div><b>Offres d’emploi</b><small>{{ adminOffers().length }} offre(s)</small></div></button>
-          <button type="button" [class.active]="adminSection() === 'users'" (click)="selectAdminSection('users')"><span>◎</span><div><b>Utilisateurs</b><small>{{ adminUsers().length }} compte(s)</small></div></button>
-        </nav>
-        <div class="admin-sidebar-user"><span>{{ user()?.fullName?.charAt(0)?.toUpperCase() }}</span><div><b>{{ user()?.fullName }}</b><small>{{ user()?.email }}</small></div></div>
-      </aside>
       <div class="admin-main">
-      <div class="admin-hero"><div><p class="section-number">ADMINISTRATION</p><h1>{{ adminSection() === 'overview' ? 'Vue d’ensemble' : adminSection() === 'offers' ? 'Offres d’emploi' : 'Utilisateurs' }}</h1><p>Gérez la plateforme CareerLens depuis votre espace sécurisé.</p></div><span class="admin-badge">Espace protégé</span></div>
+      <div class="admin-hero"><div><p class="section-number">CAREERLENS</p><h1>Dashboard</h1><p>Vue globale de l’activité et des simulations de la plateforme.</p></div><span class="admin-badge">Espace protégé</span></div>
       <div *ngIf="adminLoading()" class="admin-loading"><span class="button-spinner"></span> Loading dashboard…</div>
       <ng-container *ngIf="!adminLoading()">
         <div *ngIf="adminSection() === 'overview'" class="stat-grid"><article><span>Utilisateurs inscrits</span><strong>{{ adminStats()?.users || 0 }}</strong><small>Comptes au total</small></article><article><span>Offres d’emploi</span><strong>{{ adminStats()?.jobOffers || 0 }}</strong><small>Opportunités créées</small></article><article><span>Simulations d’entretien</span><strong>{{ adminInterviews().length }}</strong><small>Sessions enregistrées</small></article><article><span>Analyses IA</span><strong>{{ adminStats()?.analyses || 0 }}</strong><small>Rapports générés</small></article></div>
@@ -392,9 +376,6 @@
           <article class="chart-card activity-chart"><div class="chart-heading"><div><p class="section-number">ACTIVITÉ</p><h2>Vue globale</h2></div><span>Données actuelles</span></div><div class="vertical-chart"><div><span class="chart-bar" [style.height.%]="metricBarHeight(adminStats()?.users || 0)"><i>{{ adminStats()?.users || 0 }}</i></span><small>Utilisateurs</small></div><div><span class="chart-bar violet" [style.height.%]="metricBarHeight(adminStats()?.jobOffers || 0)"><i>{{ adminStats()?.jobOffers || 0 }}</i></span><small>Offres</small></div><div><span class="chart-bar green" [style.height.%]="metricBarHeight(adminInterviews().length)"><i>{{ adminInterviews().length }}</i></span><small>Entretiens</small></div><div><span class="chart-bar orange" [style.height.%]="metricBarHeight(adminStats()?.analyses || 0)"><i>{{ adminStats()?.analyses || 0 }}</i></span><small>Analyses IA</small></div></div></article>
           <article class="chart-card offers-chart"><div class="chart-heading"><div><p class="section-number">PUBLICATION</p><h2>État des offres</h2></div><span>{{ adminOffers().length }} au total</span></div><div class="offer-chart-total"><strong>{{ activeOfferCount() }}</strong><span>offre(s) actuellement visible(s)</span></div><div class="horizontal-metric"><div><span>Publiées</span><b>{{ activeOfferCount() }}</b></div><i><em [style.width.%]="adminOffers().length ? (activeOfferCount() / adminOffers().length) * 100 : 0"></em></i></div><div class="horizontal-metric archived"><div><span>Archivées</span><b>{{ archivedOfferCount() }}</b></div><i><em [style.width.%]="adminOffers().length ? (archivedOfferCount() / adminOffers().length) * 100 : 0"></em></i></div></article>
         </div>
-
-        <div *ngIf="adminSection() === 'overview'" class="admin-overview-actions"><button type="button" (click)="selectAdminSection('offers')"><span>▣</span><div><b>Gérer les offres</b><small>Créer, publier ou archiver</small></div><i>→</i></button><button type="button" (click)="selectAdminSection('users')"><span>◎</span><div><b>Voir les utilisateurs</b><small>Consulter les comptes inscrits</small></div><i>→</i></button></div>
-
 
         <div *ngIf="adminSection() === 'offers'" class="admin-offers-section">
           <div class="users-card-head"><div><h2>Job offer management</h2><p>Create, edit and remove opportunities visible to users.</p></div><span>{{ adminOffers().length }} offers</span></div>
