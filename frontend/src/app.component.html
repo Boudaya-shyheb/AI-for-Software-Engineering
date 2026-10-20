@@ -1,14 +1,15 @@
 <ng-template #unifiedNavbar>
   <nav class="unified-navbar" aria-label="Navigation CareerLens">
-    <button type="button" class="brand unified-brand" (click)="openMarketing()"><span class="brand-mark">↗</span><span>Career<span>Lens</span></span></button>
+    <button type="button" class="brand unified-brand" (click)="user()?.role === 'ADMIN' ? openAdmin() : openMarketing()"><span class="brand-mark">↗</span><span>Career<span>Lens</span></span></button>
     <div class="unified-links">
-      <button type="button" [class.active]="marketingPreview() || !user()" (click)="openMarketing()">Accueil</button>
-      <button type="button" [class.active]="user() && !marketingPreview() && currentView() === 'analyzer'" (click)="openFromLanding('analyzer')">Matching IA</button>
-      <button type="button" [class.active]="user() && !marketingPreview() && currentView() === 'jobs'" (click)="openFromLanding('jobs')">Offres</button>
+      <button *ngIf="user()?.role !== 'ADMIN'" type="button" [class.active]="marketingPreview() || !user()" (click)="openMarketing()">Accueil</button>
+      <button *ngIf="user()?.role !== 'ADMIN'" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'analyzer'" (click)="openFromLanding('analyzer')">Matching IA</button>
+      <button *ngIf="user()?.role !== 'ADMIN'" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'jobs'" (click)="openFromLanding('jobs')">Offres</button>
       <button *ngIf="user()?.role !== 'ADMIN'" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'interviews'" (click)="openInterviews()">Interview practice</button>
       <button *ngIf="user()?.role !== 'ADMIN'" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'applications'" (click)="openApplicationKits()">My applications</button>
-      <button *ngIf="user()" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'progress'" (click)="openFromLanding('progress')">Mon plan</button>
-      <button type="button" [class.active]="user() && !marketingPreview() && currentView() === 'profile'" (click)="openFromLanding('profile')">Profil</button>
+      <button *ngIf="user()?.role !== 'ADMIN' && user()" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'progress'" (click)="openFromLanding('progress')">Mon plan</button>
+      <button *ngIf="user()?.role !== 'ADMIN'" type="button" [class.active]="user() && !marketingPreview() && currentView() === 'profile'" (click)="openFromLanding('profile')">Profil</button>
+      <button *ngIf="user()?.role === 'ADMIN'" type="button" [class.active]="currentView() === 'admin'" (click)="openAdmin()">Dashboard</button>
     </div>
     <div class="unified-actions"><ng-container *ngIf="user() as navUser; else publicNavActions"><div class="unified-user"><span>{{ navUser.fullName.charAt(0).toUpperCase() }}</span><div><b>{{ navUser.fullName }}</b><small>{{ navUser.role === 'ADMIN' ? 'Administrateur' : 'Candidat' }}</small></div></div><button type="button" class="unified-logout" (click)="logout()"><span>Déconnexion</span><i>↗</i></button></ng-container><ng-template #publicNavActions><button type="button" class="landing-signin" (click)="openAuth('login')">Se connecter</button><button type="button" class="landing-start" (click)="openAuth('register')">Commencer <span>→</span></button></ng-template></div>
   </nav>
